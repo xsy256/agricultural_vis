@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目说明文档 | 农业·人口·耕地可视化</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            line-height: 1.7;
+            color: #2c3e50;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a5276 0%, #2c3e50 100%);
+            color: white;
+            padding: 40px 50px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 15px;
+        }
+        .header p {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .content {
+            padding: 40px 50px;
+        }
+        h2 {
+            color: #1a5276;
+            font-size: 1.6rem;
+            margin-top: 35px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #3498db;
+        }
+        h2:first-of-type {
+            margin-top: 0;
+        }
+        h3 {
+            color: #2c3e50;
+            font-size: 1.2rem;
+            margin-top: 25px;
+            margin-bottom: 12px;
+            padding-left: 12px;
+            border-left: 4px solid #3498db;
+        }
+        h4 {
+            color: #2c3e50;
+            font-size: 1rem;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        th {
+            background: #1a5276;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        td {
+            border: 1px solid #ddd;
+            padding: 10px 12px;
+        }
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        .highlight-box {
+            background: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .insight-box {
+            background: #e8f8e8;
+            border-left: 4px solid #27ae60;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        code {
+            background: #f0f2f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #c7254e;
+        }
+        .data-source {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .data-source p {
+            margin: 5px 0;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        footer {
+            background: #f8f9fa;
+            padding: 20px 50px;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 12px;
+            border-top: 1px solid #ecf0f1;
+        }
+        .badge {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            font-size: 12px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-right: 8px;
+        }
+        @media (max-width: 768px) {
+            .header { padding: 30px 20px; }
+            .content { padding: 25px 20px; }
+            th, td { padding: 8px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🌾 耕地 · 人口 · 农业产量</h1>
+        <p>交互式可视化项目说明文档</p>
+        <a href="index.html" class="back-link" style="color: #a8d8ff;">← 返回可视化作品</a>
+    </div>
+    
+    <div class="content">
+        <!-- ==================== 一、可视化解决的问题 ==================== -->
+        <h2>一、可视化解决的问题</h2>
+        <p><strong>核心研究问题：探究耕地面积和人口数量对农业供给需求的影响。</strong></p>
+        
+        <h3>具体可探索的子问题</h3>
+        <ul>
+            <li><strong>人口规模 vs 耕地面积</strong>：人口越多的国家，是否拥有更大的耕地面积？</li>
+            <li><strong>人口规模 vs 粮食安全</strong>：人口大国的人民是否更容易面临粮食不安全问题？</li>
+            <li><strong>区域差异</strong>：不同地区（亚洲、非洲、欧洲等）的农业模式有何不同？</li>
+            <li><strong>收入水平影响</strong>：高收入国家与低收入国家在耕地利用和粮食安全上有什么区别？</li>
+            <li><strong>时间趋势</strong>：2001-2020年间，全球农业格局如何演变？</li>
+        </ul>
+
+        <!-- ==================== 二、设计决策依据 ==================== -->
+        <h2>二、设计决策依据</h2>
+        
+        <h3>2.1 可视化形式选择</h3>
+        <p>采用<strong>散点气泡图</strong>作为核心可视化形式：</p>
+        <ul>
+            <li><strong>横轴（X轴）</strong>：人口数量（取对数）—— 衡量国家规模</li>
+            <li><strong>纵轴（Y轴）</strong>：农业生产供给力度 / 营养不良率 —— 衡量农业对需求的满足程度</li>
+            <li><strong>气泡大小</strong>：耕地面积（万平方公里）—— 衡量土地资源投入</li>
+            <li><strong>气泡颜色</strong>：所属大洲 —— 便于识别区域模式</li>
+        </ul>
+        <p>散点气泡图便于用户清晰直观地看到不同国家的指标对比，也更容易通过气泡的聚类和分布总结出有意义的结论。</p>
+        
+        <h3>2.2 交互功能设计</h3>
+        <ul>
+            <li><strong>年份滑动条</strong>：支持2000-2020年时间维度探索</li>
+            <li><strong>区域筛选器</strong>：可按亚洲、非洲、欧洲等大洲筛选</li>
+            <li><strong>收入组筛选器</strong>：可按高收入、中高等收入、中低等收入、低收入筛选</li>
+            <li><strong>指标切换按钮</strong>：可在“生产指数”和“营养不良率”之间切换纵轴</li>
+            <li><strong>国家下拉框</strong>：直接选择感兴趣的国家，自动设置筛选并高亮显示</li>
+            <li><strong>点击选中 + 悬停提示</strong>：点击圆圈查看详细信息，悬停显示概要</li>
+        </ul>
+        <p>由于显示全部国家在视觉上会造成干扰冲突，用户可以筛选想要查询的大洲和收入等级，以更局部的视角考察世界各国的情况，同时也可以让用户根据收入等级等指标的比较得出更丰富的结论。</p>
+        
+        <h3>2.3 替代方案考虑</h3>
+        <ul>
+            <li><strong>以地理区域为单位研究</strong>：曾考虑过以世界地理区域为单位研究而不是以国家为单位，但后来考虑到国家之间有丰富的个体差异，最终采用将全部国家显示出来，并提供地区筛选功能的设计方案。</li>
+            <li><strong>地图投影</strong>：地理直观但面积扭曲严重，无法同时展示多维度数据</li>
+            <li><strong>平行坐标</strong>：多维度展示但认知负荷过高</li>
+        </ul>
+        
+        <h3>2.4 纵轴指标选取的关键决策</h3>
+        <div class="warning-box">
+            <p><strong>⚠️ 欺骗性可视化设计说明</strong></p>
+            <p>最初我想用农业生产量除以人口作为衡量指标，但后来发现原始数据中<strong>农业生产指数是相对于本国2014-2016年产量的相对指数（2014-2016年为100）</strong>，只能用于比较同一个国家不同年份的农业产量变化，<strong>无法跨国家进行比较</strong>。</p>
+            <p>故最终将其作为<strong>欺骗性可视化显示</strong>（可在指标中选择“生产指数”查看）。如果采用欺骗性可视化的纵轴指标分析，会发现农业供给力度几乎只和人口有关（因为纵轴指标=农业生产指数/人口，农业生产指数都是相对于本国2014-2016年的变化情况，数值都非常接近100，故计算数值几乎完全依赖于分母的人口数），会得出错误结论：<strong>人口越多的国家农业生产供给力度必然越差</strong>。</p>
+        </div>
+        
+        <div class="insight-box">
+            <p><strong>✅ 有效可视化设计说明</strong></p>
+            <p>有效可视化最终选择了<strong>营养不良率</strong>作为纵轴指标，可以直接反映一个国家的农业生产供应是否能满足需求。</p>
+            <p>采用有效可视化的纵轴指标分析，就会发现影响农业供给满足需求程度是<strong>多个因素相互制衡的结果</strong>，除了显而易见的人口数量和耕地面积的影响外，农业生产的地理区位条件和经济收入也会影响农业生产供给力度。例如一些非洲国家相比欧洲国家拥有更大面积的耕地，但由于国家经济实力较弱且耕地资源质量差，反而有更高的营养不良率。</p>
+        </div>
+        
+        <div class="highlight-box">
+            <p><strong>📊 两种指标对比</strong></p>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><strong>生产指数（欺骗性）</strong>：数值几乎只依赖人口，得出“人口多必然供给差”的错误结论</li>
+                <li><strong>营养不良率（有效）</strong>：反映真实粮食安全状况，揭示多因素制衡的复杂关系</li>
+            </ul>
+        </div>
+
+        <!-- ==================== 三、外部资源引用 ==================== -->
+        <h2>三、外部资源引用</h2>
+        
+        <h3>3.1 数据来源</h3>
+        <p>所有数据均来自<strong>世界银行开放数据平台（World Bank Open Data）</strong>，通过API下载CSV格式文件：</p>
+        
+        <div class="data-source">
+            <p><span class="badge">耕地面积占比</span> <code>https://api.worldbank.org/v2/en/indicator/AG.LND.AGRI.ZS?downloadformat=csv</code></p>
+            <p><span class="badge">国土面积</span> <code>https://api.worldbank.org/v2/en/indicator/AG.LND.TOTL.K2?downloadformat=csv</code></p>
+            <p><span class="badge">国家农业生产指数</span> <code>https://api.worldbank.org/v2/en/indicator/AG.PRD.FOOD.XD?downloadformat=csv</code></p>
+            <p><span class="badge">国家人口数量</span> <code>https://api.worldbank.org/v2/en/indicator/SP.POP.TOTL?downloadformat=csv</code></p>
+            <p><span class="badge">国家营养不良率</span> <code>https://api.worldbank.org/v2/en/indicator/SN.ITK.DEFC.ZS?downloadformat=csv</code></p>
+        </div>
+        
+        <h3>3.2 技术框架</h3>
+        <ul>
+            <li><strong>D3.js v7</strong>：可视化核心库</li>
+            <li><strong>原生 JavaScript (ES6)</strong>：交互逻辑实现</li>
+            <li><strong>HTML5/CSS3</strong>：界面布局与样式</li>
+            <li><strong>Python/Pandas</strong>：数据清洗与预处理</li>
+            <li><strong>GitHub Pages</strong>：项目部署托管</li>
+        </ul>
+        
+        <h3>3.3 设计灵感</h3>
+        <ul>
+            <li><strong>NameVoyager</strong>：简洁的交互设计启发</li>
+            <li><strong>Gapminder</strong>：气泡图+时间滑动条的经典组合</li>
+            <li><strong>课堂案例（Zipdecode, HomeFinder）</strong>：动态查询技术启发</li>
+        </ul>
+
+        <!-- ==================== 四、开发流程概述 ==================== -->
+        <h2>四、开发流程概述</h2>
+        
+        <h3>4.1 团队成员分工</h3>
+        <p>本项目为<strong>单人完成</strong>，所有工作由作者独立完成。</p>
+        
+        <h3>4.2 开发时间统计</h3>
+        <p><strong>开发总时间约16小时</strong>，具体分布如下：</p>
+        <table>
+            <thead>
+                <tr><th>环节</th><th>耗时</th><th>占比</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>数据获取与清洗</td><td>3h</td><td>19%</td></tr>
+                <tr><td>可视化设计（指标选取、形式确定）</td><td>2h</td><td>12%</td></tr>
+                <tr><td>D3.js 基础搭建</td><td>2h</td><td>12%</td></tr>
+                <tr><td>交互功能实现</td><td>3h</td><td>19%</td></tr>
+                <tr><td>耕地面积计算与数据整合</td><td>2h</td><td>12%</td></tr>
+                <tr><td>样式美化与布局</td><td>1.5h</td><td>9%</td></tr>
+                <tr><td>调试与Bug修复</td><td>1.5h</td><td>9%</td></tr>
+                <tr><td>欺骗性/有效可视化双指标实现</td><td>1h</td><td>6%</td></tr>
+            </tbody>
+        </table>
+        
+        <h3>4.3 耗时最多的环节</h3>
+        <ul>
+            <li><strong>确定可视化研究问题及各项指标</strong>：这是整个项目的核心，需要深入理解世界银行各指标的含义和适用性，特别是发现“农业生产指数无法跨国比较”这一关键问题，以及设计欺骗性可视化的对比方案。</li>
+            <li><strong>编写网页可视化程序</strong>：D3.js的动态更新、数据绑定、事件处理等需要反复调试，特别是指标切换功能需要同时更新比例尺、坐标轴、圆圈位置、信息面板等多个组件。</li>
+            <li><strong>耕地面积数据整合</strong>：需要将国土面积和耕地占比两个CSV文件合并计算，处理缺失值和异常值。</li>
+        </ul>
+        
+        <h3>4.4 开发中的关键发现</h3>
+        <div class="insight-box">
+            <p><strong>🔍 关于“农业生产指数”的重要发现</strong></p>
+            <p>世界银行的“农业生产指数”（AG.PRD.FOOD.XD）是以2014-2016年为基准（=100）的相对指数，反映的是<strong>本国农业产量相对于自身基准期的变化</strong>，而非绝对产量。因此：</p>
+            <ul>
+                <li>✅ <strong>可用于</strong>：比较同一个国家不同年份的农业产量变化趋势</li>
+                <li>❌ <strong>不可用于</strong>：跨国家比较农业产量绝对值</li>
+            </ul>
+            <p>基于这一发现，本可视化将其作为“欺骗性可视化”展示，与基于营养不良率的“有效可视化”形成对比，帮助用户理解指标选择的重要性。</p>
+        </div>
+
+        <!-- ==================== 五、总结 ==================== -->
+        <h2>五、总结</h2>
+        <p>本可视化项目通过散点气泡图、时间滑动条、指标切换等交互技术，帮助用户探索“耕地面积和人口数量对农业供给需求的影响”这一核心问题。通过将数据编码为位置、大小、颜色等视觉通道，用户可以直观地比较不同国家在人口规模、耕地资源、农业产出和粮食安全方面的关系。</p>
+        <p>特别值得注意的是，本项目通过<strong>欺骗性可视化与有效可视化的对比设计</strong>，揭示了指标选择对分析结论的重大影响：使用“生产指数/人口”会得出“人口多必然供给差”的错误结论，而使用“营养不良率”则能反映多因素制衡的复杂现实。这一设计不仅服务于数据分析，也具有一定的教育意义——提醒用户在使用数据时要警惕指标的局限性。</p>
+        <p>开发总耗时约16小时，最耗时的环节是确定研究问题和编写可视化程序。通过这次项目，深入理解了交互式可视化的设计原则和实现技术，也认识到良好的数据结构和代码架构对后续开发的重要性。</p>
+    </div>
+    
+    <footer>
+        <p>数据来源：World Bank Open Data | 可视化库：D3.js v7 | 最后更新：2026年4月</p>
+        <p style="margin-top: 8px;">© 2024 农业·人口·耕地可视化项目 | 用于交互式可视化课程作业</p>
+    </footer>
+</div>
+</body>
+</html>

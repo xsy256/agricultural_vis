@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>耕地·人口·农业产量 | 交互式可视化</title>
+    <div style="text-align: right; margin-bottom: 10px;">
+    <a href="documentation.html" target="_blank" style="color: #3498db; text-decoration: none;">📄 查看项目说明文档</a>
+    </div>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        .sub {
+            color: #5a6c7e;
+            margin-bottom: 24px;
+            border-left: 4px solid #3498db;
+            padding-left: 16px;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 20px;
+            background: #f8f9fc;
+            padding: 12px 20px;
+            border-radius: 40px;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .control-group label {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        select, input {
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+        .year-slider {
+            width: 260px;
+        }
+        .country-select {
+            min-width: 180px;
+            max-width: 220px;
+        }
+        .indicator-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .indicator-buttons button {
+            background: #e0e0e0;
+            color: #333;
+            margin: 0;
+            padding: 6px 16px;
+        }
+        .indicator-buttons button.active {
+            background: #3498db;
+            color: white;
+        }
+        .viz-container {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+        #scatterplot {
+            flex: 2;
+            min-width: 500px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            padding: 10px;
+            position: relative;
+        }
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 100;
+            font-family: monospace;
+            line-height: 1.5;
+            max-width: 280px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .info-panel {
+            flex: 1;
+            min-width: 280px;
+            background: linear-gradient(135deg, #fef9e6 0%, #fff4e0 100%);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-left: 4px solid #e67e22;
+            margin-left: 180px;
+        }
+        .info-panel h3 {
+            margin-bottom: 16px;
+            color: #e67e22;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #e67e22;
+            display: inline-block;
+            padding-bottom: 4px;
+        }
+        .info-panel p {
+            margin: 12px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .info-panel .highlight {
+            color: #e67e22;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #7f8c8d;
+            text-align: center;
+            border-top: 1px solid #ecf0f1;
+            padding-top: 16px;
+        }
+        .legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+            font-size: 12px;
+        }
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            display: inline-block;
+            border-radius: 3px;
+            margin-right: 4px;
+        }
+        button {
+            background: #3498db;
+            border: none;
+            color: white;
+            padding: 6px 14px;
+            border-radius: 24px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: #2980b9;
+            transform: scale(1.02);
+        }
+        .note {
+            margin-top: 10px;
+            font-size: 11px;
+            color: #999;
+            text-align: center;
+        }
+        .selected-info {
+            background: #fff4e8;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 16px;
+            border: 1px solid #f0d8b0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🌾 耕地 · 人口 · 农业产量（2001-2020）</h1>
+    <div class="sub">点击任意国家圆圈查看详细信息 | 人口大国是否拥有更多耕地？</div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>📅 年份:</label>
+            <input type="range" id="yearSlider" class="year-slider" min="2001" max="2020" step="1" value="2015">
+            <span id="yearValue">2015</span>
+        </div>
+        <div class="control-group">
+            <label>🌍 区域:</label>
+            <select id="regionFilter">
+                <option value="all">全部</option>
+                <option value="Asia">亚洲</option>
+                <option value="Africa">非洲</option>
+                <option value="Europe">欧洲</option>
+                <option value="North America">北美洲</option>
+                <option value="South America">南美洲</option>
+                <option value="Oceania">大洋洲</option>
+                <option value="Caribbean">加勒比</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>💰 收入组:</label>
+            <select id="incomeFilter">
+                <option value="all">全部</option>
+                <option value="High income">高收入</option>
+                <option value="Upper middle income">中高等收入</option>
+                <option value="Lower middle income">中低等收入</option>
+                <option value="Low income">低收入</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>选择国家:</label>
+            <select id="countrySelect" class="country-select">
+                <option value="">-- 选择国家 --</option>
+            </select>
+        </div>
+        <div class="control-group indicator-buttons">
+            <label>📊 指标:</label>
+            <button id="btnProduction" class="active">生产指数</button>
+            <button id="btnMalnutrition">营养不良率</button>
+        </div>
+        <button id="resetBtn">重置筛选</button>
+        <button id="clearSelectionBtn" style="background:#95a5a6;">清除选中</button>
+    </div>
+
+    <div class="viz-container">
+        <div id="scatterplot"></div>
+        <div class="info-panel" id="infoPanel">
+            <h3>📌 国家详情</h3>
+            <p>✨ <strong>点击任意圆圈</strong> 查看详细信息</p>
+            <p style="font-size:12px; color:#888; margin-top:16px;">
+                💡 提示：<br>
+                • 圆圈大小 = 耕地面积（万平方公里）<br>
+                • 颜色 = 地理区域<br>
+                • 点击后圆圈会高亮显示
+            </p>
+        </div>
+    </div>
+    <div class="legend">
+        <span><span class="legend-color" style="background:#1f77b4;"></span> 非洲</span>
+        <span><span class="legend-color" style="background:#ff7f0e;"></span> 亚洲</span>
+        <span><span class="legend-color" style="background:#2ca02c;"></span> 欧洲</span>
+        <span><span class="legend-color" style="background:#d62728;"></span> 北美洲</span>
+        <span><span class="legend-color" style="background:#9467bd;"></span> 南美洲</span>
+        <span><span class="legend-color" style="background:#8c564b;"></span> 大洋洲</span>
+        <span><span class="legend-color" style="background:#e377c2;"></span> 加勒比</span>
+        <span>⚪ 圆圈大小 = 耕地面积 (万 km²)</span>
+        <span>⚫ 黑色边框 = 当前选中</span>
+    </div>
+    <footer>
+        数据来源：World Bank Open Data (2001-2020) | 可视化说明：X轴=人口(对数)，气泡大小=耕地面积，颜色=区域
+    </footer>
+    <div class="note">
+        💡 交互说明：<strong>点击圆圈</strong>查看详情，选中后圆圈会显示黑色边框；年份/筛选器切换后选中状态自动清除<br>
+        📊 可切换两种指标：生产指数（反映农业产出压力）和营养不良率（直接反映粮食安全状况）
+    </div>
+</div>
+
+<script>
+    let fullData = [];
+    let currentYear = 2015;
+    let regionFilter = "all";
+    let incomeFilter = "all";
+    let selectedCountry = null;
+    let currentYAxis = "production"; // "production" 或 "malnutrition"
+    
+    let allCountriesList = [];
+
+    const width = 900, height = 550;
+    const margin = { top: 50, right: 90, bottom: 70, left: 80 };
+
+    const svg = d3.select("#scatterplot")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+    d3.json("data/agricultural_data.json").then(data => {
+        fullData = data.data;
+        console.log("数据加载成功，共", fullData.length, "条记录");
+        
+        const countrySet = new Set();
+        fullData.forEach(d => { countrySet.add(d.country); });
+        allCountriesList = Array.from(countrySet).sort();
+        
+        const countrySelect = d3.select("#countrySelect");
+        allCountriesList.forEach(country => {
+            countrySelect.append("option").attr("value", country).text(country);
+        });
+        
+        drawVisualization();
+        setupEventListeners();
+    }).catch(err => {
+        console.error("数据加载失败:", err);
+        document.getElementById("scatterplot").innerHTML = "<p style='color:red'>⚠️ 数据加载失败，请确保 data/agricultural_data.json 存在</p>";
+    });
+
+    function setupEventListeners() {
+        d3.select("#yearSlider").on("input", function() {
+            currentYear = +this.value;
+            d3.select("#yearValue").text(currentYear);
+            selectedCountry = null;
+            drawVisualization();
+        });
+        d3.select("#regionFilter").on("change", function() {
+            regionFilter = this.value;
+            selectedCountry = null;
+            drawVisualization();
+        });
+        d3.select("#incomeFilter").on("change", function() {
+            incomeFilter = this.value;
+            selectedCountry = null;
+            drawVisualization();
+        });
+        d3.select("#resetBtn").on("click", () => {
+            regionFilter = "all";
+            incomeFilter = "all";
+            selectedCountry = null;
+            d3.select("#regionFilter").property("value", "all");
+            d3.select("#incomeFilter").property("value", "all");
+            d3.select("#countrySelect").property("value", "");
+            drawVisualization();
+        });
+        d3.select("#clearSelectionBtn").on("click", () => {
+            selectedCountry = null;
+            d3.select("#countrySelect").property("value", "");
+            drawVisualization();
+            document.getElementById("infoPanel").innerHTML = `
+                <h3>📌 国家详情</h3>
+                <p>✨ <strong>点击任意圆圈</strong> 查看详细信息</p>
+                <p style="font-size:12px; color:#888; margin-top:16px;">
+                    💡 提示：<br>
+                    • 圆圈大小 = 耕地面积（万平方公里）<br>
+                    • 颜色 = 地理区域<br>
+                    • 点击后圆圈会高亮显示
+                </p>
+            `;
+        });
+        
+        d3.select("#btnProduction").on("click", function() {
+            currentYAxis = "production";
+            d3.select("#btnProduction").classed("active", true);
+            d3.select("#btnMalnutrition").classed("active", false);
+            selectedCountry = null;
+            drawVisualization();
+        });
+        d3.select("#btnMalnutrition").on("click", function() {
+            currentYAxis = "malnutrition";
+            d3.select("#btnProduction").classed("active", false);
+            d3.select("#btnMalnutrition").classed("active", true);
+            selectedCountry = null;
+            drawVisualization();
+        });
+        
+        d3.select("#countrySelect").on("change", function() {
+            const selectedCountryName = this.value;
+            if (!selectedCountryName) return;
+            
+            const countryData = fullData.find(d => d.country === selectedCountryName && d.year === currentYear);
+            if (!countryData) {
+                console.warn("未找到该国家在", currentYear, "年的数据");
+                return;
+            }
+            
+            regionFilter = countryData.region;
+            incomeFilter = countryData.incomeGroup;
+            d3.select("#regionFilter").property("value", regionFilter);
+            d3.select("#incomeFilter").property("value", incomeFilter);
+            selectedCountry = selectedCountryName;
+            drawVisualization();
+            
+            setTimeout(() => {
+                svg.selectAll(".country-circle")
+                    .attr("stroke", c => (c && c.country === selectedCountry) ? "#000000" : "#333")
+                    .attr("stroke-width", c => (c && c.country === selectedCountry) ? 3 : 0.8);
+            }, 50);
+        });
+    }
+
+    function updateInfoPanel(countryData) {
+        var areaDisplay = (countryData.agriculturalLandArea && countryData.agriculturalLandArea > 0) 
+            ? countryData.agriculturalLandArea.toFixed(5) + " 万 km²" 
+            : "数据缺失";
+        
+        var yMetricHtml = "";
+        if (currentYAxis === "production") {
+            var supplyScaled = countryData.foodProductionPerCapita * 10;
+            yMetricHtml = `
+                <p>🧑‍🌾 <strong>农业生产供给力度</strong><br>
+                <span class="highlight">${supplyScaled.toFixed(2)}</span><br>
+                <small>📊 数值越高 → 农业生产供给力度越强，越能支撑人口需求</small></p>
+            `;
+        } else {
+            var malValue = countryData.undernourishment;
+            if (malValue == null) {
+                yMetricHtml = `<p>⚠️ <strong>营养不良率</strong><br><span class="highlight">数据缺失</span><br><small>该年份暂无营养不良率数据</small></p>`;
+            } else {
+                var malStatus = malValue < 2.5 ? "粮食安全状况良好 🟢" : 
+                                malValue < 10 ? "粮食安全面临压力 🟡" : 
+                                malValue < 20 ? "粮食不安全情况严重 🟠" : "粮食危机 🔴";
+                yMetricHtml = `
+                    <p>⚠️ <strong>营养不良率</strong><br>
+                    <span class="highlight">${malValue.toFixed(1)}%</span><br>
+                    <small>数值越低 → 粮食安全状况越好</small><br>
+                    <small>评估: ${malStatus}</small></p>
+                `;
+            }
+        }
+        
+        document.getElementById("infoPanel").innerHTML = `
+            <h3>📌 ${countryData.country} (${countryData.year})</h3>
+            <div class="selected-info">
+                <p>🌾 <strong>耕地面积</strong><br>
+                <span class="highlight">${areaDisplay}</span><br>
+                <small>(占总面积 ${countryData.agriculturalLand.toFixed(1)}%)</small></p>
+                
+                <p>👥 <strong>总人口</strong><br>
+                <span class="highlight">${(countryData.population/1e6).toFixed(2)} 百万</span></p>
+                
+                ${yMetricHtml}
+                
+                <p>🌍 <strong>地理区域</strong><br>
+                <span class="highlight">${countryData.region}</span></p>
+                
+                <p>💰 <strong>收入组别</strong><br>
+                <span class="highlight">${countryData.incomeGroup}</span></p>
+            </div>
+            <hr>
+            <p style="font-size:12px; margin-top:12px;">
+                💡 点击其他圆圈可切换查看不同国家<br>
+                ⚫ 黑色边框表示当前选中国家
+            </p>
+        `;
+    }
+
+    function drawVisualization() {
+        console.log("开始绘制图表，当前年份:", currentYear, "指标:", currentYAxis);
+        
+        let filtered = fullData.filter(d => d.year === currentYear);
+        
+        if (regionFilter !== "all") {
+            filtered = filtered.filter(d => d.region === regionFilter);
+        }
+        if (incomeFilter !== "all") {
+            filtered = filtered.filter(d => d.incomeGroup === incomeFilter);
+        }
+        
+        filtered = filtered.filter(d => d.population > 0 && d.foodProduction > 0);
+        
+        console.log("筛选后共", filtered.length, "个国家");
+        
+        if (filtered.length === 0) {
+            svg.selectAll("*").remove();
+            return;
+        }
+        
+        if (selectedCountry) {
+            const stillInFilter = filtered.some(d => d.country === selectedCountry);
+            if (!stillInFilter) {
+                selectedCountry = null;
+                d3.select("#countrySelect").property("value", "");
+            }
+        }
+        
+        // 计算X轴和Y轴值
+        filtered.forEach(d => {
+            d.logPopulation = Math.log10(d.population);
+            if (currentYAxis === "production") {
+                d.yValue = d.foodProductionPerCapita * 10;
+                d.yLabel = "农业生产供给力度 (×10)";
+            } else {
+                d.yValue = d.undernourishment;
+                d.yLabel = "营养不良率 (%)";
+            }
+        });
+        
+        // 过滤掉Y轴无效值
+        filtered = filtered.filter(d => d.yValue != null && !isNaN(d.yValue));
+        
+        if (filtered.length === 0) {
+            svg.selectAll("*").remove();
+            return;
+        }
+        
+        // 定义比例尺
+        const xExtent = d3.extent(filtered, d => d.logPopulation);
+        const yExtent = d3.extent(filtered, d => d.yValue);
+        
+        const xDomain = xExtent[0] === xExtent[1] 
+            ? [xExtent[0] - 0.5, xExtent[0] + 0.5]
+            : [xExtent[0] - 0.2, xExtent[1] + 0.2];
+        
+        let yDomain;
+        if (currentYAxis === "production") {
+            yDomain = [0, yExtent[1] * 1.05];
+        } else {
+            yDomain = [0, yExtent[1] * 1.05];
+        }
+        
+        const xScale = d3.scaleLinear()
+            .domain(xDomain)
+            .range([0, width - margin.left - margin.right]);
+        
+        const yScale = d3.scaleLinear()
+            .domain(yDomain)
+            .range([height - margin.top - margin.bottom, 0]);
+        
+        // 圆圈大小比例尺
+        const validLandAreas = filtered
+            .filter(d => d.agriculturalLandArea != null && d.agriculturalLandArea > 0)
+            .map(d => d.agriculturalLandArea);
+        
+        let maxLandArea = validLandAreas.length > 0 ? Math.max(...validLandAreas) : 500;
+        const sizeScale = d3.scaleSqrt()
+            .domain([0, maxLandArea])
+            .range([4, 35]);
+        
+        const colorMap = {
+            "Africa": "#1f77b4", "Asia": "#ff7f0e", "Europe": "#2ca02c",
+            "North America": "#d62728", "South America": "#9467bd",
+            "Oceania": "#8c564b", "Caribbean": "#e377c2"
+        };
+        
+        // 更新坐标轴
+        svg.selectAll("*").remove();
+        
+        const xTicks = [];
+        const xStep = (xDomain[1] - xDomain[0]) / 10;
+        for (let i = 0; i <= 10; i++) { xTicks.push(xDomain[0] + xStep * i); }
+        
+        const xAxis = d3.axisBottom(xScale)
+            .tickValues(xTicks)
+            .tickFormat(d => `10^${d.toFixed(1)}`);
+        svg.append("g")
+            .attr("class", "axis")
+            .attr("transform", `translate(0, ${height - margin.top - margin.bottom})`)
+            .call(xAxis);
+        
+        const yTicks = [];
+        const yStep = yDomain[1] / 10;
+        for (let i = 0; i <= 10; i++) { yTicks.push(yStep * i); }
+        
+        const yAxis = d3.axisLeft(yScale)
+            .tickValues(yTicks)
+            .tickFormat(d => currentYAxis === "production" ? d.toFixed(2) : d.toFixed(1));
+        svg.append("g").attr("class", "axis").call(yAxis);
+        
+        svg.append("text")
+            .attr("class", "axis-label")
+            .attr("x", (width - margin.left - margin.right)/2)
+            .attr("y", height - margin.top - margin.bottom + 40)
+            .attr("text-anchor", "middle")
+            .style("fill", "#2c3e50").style("font-size", "12px")
+            .text("👥 人口 (对数尺度)");
+        
+        svg.append("text")
+            .attr("class", "axis-label")
+            .attr("x", -15).attr("y", -20)
+            .attr("text-anchor", "middle")
+            .style("fill", "#2c3e50").style("font-size", "12px").style("font-weight", "bold")
+            .text(currentYAxis === "production" ? "📊 农业生产供给力度 (×10)" : "⚠️ 营养不良率 (%)");
+        
+        svg.append("text")
+            .attr("class", "chart-title")
+            .attr("x", (width - margin.left - margin.right)/2).attr("y", -15)
+            .attr("text-anchor", "middle")
+            .style("font-size", "14px").style("font-weight", "bold").style("fill", "#2c3e50")
+            .text(`${currentYear}年 全球农业格局 (${currentYAxis === "production" ? "生产指数" : "营养不良率"})`);
+        
+        // 绘制圆圈
+        const circles = svg.selectAll(".country-circle").data(filtered, d => d.country);
+        circles.exit().remove();
+        
+        const circlesEnter = circles.enter()
+            .append("circle")
+            .attr("class", "country-circle")
+            .attr("cx", d => xScale(d.logPopulation))
+            .attr("cy", d => yScale(d.yValue))
+            .attr("r", d => sizeScale(d.agriculturalLandArea || 0))
+            .attr("fill", d => colorMap[d.region] || "#aaa")
+            .attr("stroke", d => (selectedCountry === d.country) ? "#000000" : "#333")
+            .attr("stroke-width", d => (selectedCountry === d.country) ? 3 : 0.8)
+            .attr("opacity", 0.7)
+            .style("cursor", "pointer");
+        
+        circlesEnter
+            .on("click", function(event, d) {
+                console.log("点击国家:", d.country);
+                event.stopPropagation();
+                selectedCountry = d.country;
+                d3.select("#countrySelect").property("value", d.country);
+                svg.selectAll(".country-circle")
+                    .attr("stroke", c => (c.country === selectedCountry) ? "#000000" : "#333")
+                    .attr("stroke-width", c => (c.country === selectedCountry) ? 3 : 0.8);
+                updateInfoPanel(d);
+            })
+            .on("mouseenter", function(event, d) {
+                d3.select(this).attr("stroke-width", 2.5).attr("opacity", 0.95);
+                var areaDisplay = (d.agriculturalLandArea && d.agriculturalLandArea > 0) 
+                    ? d.agriculturalLandArea.toFixed(5) + " 万km²" : "数据缺失";
+                var yDisplay = currentYAxis === "production" 
+                    ? "供给力度: " + (d.foodProductionPerCapita * 10).toFixed(2)
+                    : (d.undernourishment ? "营养不良率: " + d.undernourishment.toFixed(1) + "%" : "数据缺失");
+                tooltip.style("opacity", 1)
+                    .html(`<strong style="font-size:14px">${d.country}</strong><br>
+                        🌾 耕地面积: ${areaDisplay}<br>
+                        🌾 耕地占比: ${d.agriculturalLand.toFixed(1)}%<br>
+                        👥 人口: ${(d.population/1e6).toFixed(1)}M<br>
+                        📊 ${yDisplay}<br>
+                        💡 <em>点击查看详情</em>`)
+                    .style("left", (event.pageX + 15) + "px")
+                    .style("top", (event.pageY - 35) + "px");
+            })
+            .on("mouseleave", function(event, d) {
+                d3.select(this)
+                    .attr("stroke-width", d => (selectedCountry === d.country) ? 3 : 0.8)
+                    .attr("opacity", 0.7);
+                tooltip.style("opacity", 0);
+            });
+        
+        circles.merge(circlesEnter)
+            .transition()
+            .duration(300)
+            .attr("cx", d => xScale(d.logPopulation))
+            .attr("cy", d => yScale(d.yValue))
+            .attr("r", d => sizeScale(d.agriculturalLandArea || 0));
+        
+        console.log("图表绘制完成，共绘制", filtered.length, "个圆圈");
+        
+        if (selectedCountry) {
+            const selectedData = filtered.find(d => d.country === selectedCountry);
+            if (selectedData) updateInfoPanel(selectedData);
+        }
+    }
+</script>
+</body>
+</html>
