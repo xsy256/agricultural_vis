@@ -2,13 +2,12 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耕地·人口·农业产量 | 交互式可视化</title>
-    <div style="text-align: right; margin-bottom: 10px;">
-    <a href="documentation.html" target="_blank" style="color: #3498db; text-decoration: none;">📄 查看项目说明文档</a>
-    </div>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>耕地·人口·粮食安全 | 交互式可视化</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/topojson@3"></script>
     <style>
+        /* ... 样式保持不变，省略 ... */
         * {
             margin: 0;
             padding: 0;
@@ -18,188 +17,293 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f5f7fa;
             padding: 20px;
+            overflow-x: auto;
+            min-width: 1400px;
         }
         .container {
-            max-width: 1400px;
-            margin: 0 auto;
             background: white;
             border-radius: 16px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-            padding: 20px;
+            padding: 24px;
+            width: fit-content;
+            min-width: 100%;
         }
         h1 {
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             margin-bottom: 8px;
             color: #2c3e50;
+            white-space: nowrap;
         }
         .sub {
             color: #5a6c7e;
             margin-bottom: 24px;
             border-left: 4px solid #3498db;
             padding-left: 16px;
+            font-size: 13px;
+            white-space: nowrap;
         }
         .controls {
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
+            gap: 12px;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
             background: #f8f9fc;
-            padding: 12px 20px;
+            padding: 12px 24px;
             border-radius: 40px;
         }
         .control-group {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
         }
         .control-group label {
             font-weight: 600;
             color: #2c3e50;
+            font-size: 12px;
         }
         select, input {
-            padding: 6px 12px;
+            padding: 5px 10px;
             border-radius: 20px;
             border: 1px solid #ccc;
-            font-size: 14px;
+            font-size: 12px;
         }
         .year-slider {
-            width: 260px;
+            width: 200px;
         }
         .country-select {
-            min-width: 180px;
-            max-width: 220px;
+            min-width: 140px;
+            max-width: 180px;
         }
-        .indicator-buttons {
+        .indicator-buttons, .color-mode-buttons {
             display: flex;
-            gap: 8px;
+            gap: 4px;
         }
-        .indicator-buttons button {
+        .indicator-buttons button, .color-mode-buttons button {
             background: #e0e0e0;
             color: #333;
             margin: 0;
-            padding: 6px 16px;
+            padding: 4px 10px;
+            font-size: 11px;
+            border-radius: 20px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
         }
-        .indicator-buttons button.active {
+        .indicator-buttons button.active, .color-mode-buttons button.active {
             background: #3498db;
             color: white;
         }
+        .color-mode-buttons button.active {
+            background: #27ae60;
+        }
         .viz-container {
             display: flex;
-            gap: 40px;
-            flex-wrap: wrap;
+            gap: 60px;
+            flex-wrap: nowrap;
         }
         #scatterplot {
-            flex: 2;
-            min-width: 500px;
             background: white;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             padding: 10px;
             position: relative;
+            overflow: visible;
+            flex-shrink: 0;
         }
         .tooltip {
             position: absolute;
             background: rgba(0,0,0,0.9);
             color: white;
-            padding: 10px 14px;
+            padding: 8px 12px;
             border-radius: 8px;
-            font-size: 12px;
+            font-size: 11px;
             pointer-events: none;
             z-index: 100;
             font-family: monospace;
-            line-height: 1.5;
-            max-width: 280px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            line-height: 1.4;
+            max-width: 260px;
         }
         .info-panel {
-            flex: 1;
-            min-width: 280px;
+            flex: 0 0 450px;
             background: linear-gradient(135deg, #fef9e6 0%, #fff4e0 100%);
             border-radius: 12px;
-            padding: 20px;
+            padding: 12px 15px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             border-left: 4px solid #e67e22;
-            margin-left: 180px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            max-height: 760px;
         }
         .info-panel h3 {
-            margin-bottom: 16px;
+            margin-bottom: 5px;
             color: #e67e22;
-            font-size: 1.3rem;
+            font-size: 1rem;
             border-bottom: 2px solid #e67e22;
             display: inline-block;
-            padding-bottom: 4px;
+            padding-bottom: 2px;
         }
-        .info-panel p {
-            margin: 12px 0;
-            font-size: 14px;
-            line-height: 1.5;
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
-        .info-panel .highlight {
-            color: #e67e22;
+        .badge-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .trade-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 16px;
+            font-size: 10px;
             font-weight: bold;
-            font-size: 1.1em;
+        }
+        .assessment-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .radar-container {
+            margin: 6px 0 4px 0;
+            text-align: center;
+            background: rgba(255,255,240,0.6);
+            border-radius: 12px;
+            padding: 6px 0;
+            min-height: 300px;
+        }
+        .worldmap-mini {
+            margin-top: 8px;
+            background: #eef2f5;
+            border-radius: 12px;
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #dcd4b0;
+            box-shadow: inset 0 0 2px rgba(0,0,0,0.02);
+        }
+        .worldmap-mini p {
+            font-size: 10px;
+            margin-bottom: 4px;
+            color: #7f5d2e;
+            font-weight: bold;
+        }
+        #miniMap {
+            background: #fef9e6;
+            border-radius: 8px;
+            display: inline-block;
+            width: 100%;
+            min-height: 230px;
+        }
+        .detail-list {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid #f0d8b0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 8px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 6px;
+        }
+        .detail-label {
+            font-size: 10px;
+            color: #7f8c8d;
+        }
+        .detail-value {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 11px;
         }
         footer {
-            margin-top: 30px;
-            font-size: 12px;
+            margin-top: 24px;
+            font-size: 11px;
             color: #7f8c8d;
             text-align: center;
             border-top: 1px solid #ecf0f1;
-            padding-top: 16px;
+            padding-top: 12px;
         }
         .legend {
             display: flex;
-            gap: 16px;
+            gap: 15px;
             flex-wrap: wrap;
             margin-top: 12px;
-            font-size: 12px;
+            padding: 8px 12px;
+            background: #f8f9fc;
+            border-radius: 10px;
+            font-size: 11px;
         }
         .legend-color {
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             display: inline-block;
-            border-radius: 3px;
+            border-radius: 2px;
             margin-right: 4px;
         }
         button {
             background: #3498db;
             border: none;
             color: white;
-            padding: 6px 14px;
-            border-radius: 24px;
+            padding: 4px 12px;
+            border-radius: 20px;
             cursor: pointer;
             font-weight: bold;
-            transition: all 0.2s;
+            font-size: 11px;
         }
         button:hover {
             background: #2980b9;
-            transform: scale(1.02);
         }
         .note {
-            margin-top: 10px;
-            font-size: 11px;
+            margin-top: 8px;
+            font-size: 10px;
             color: #999;
             text-align: center;
         }
-        .selected-info {
-            background: #fff4e8;
-            padding: 12px;
+        .scroll-content {
+            overflow-y: auto;
+            flex: 1;
+        }
+        .map-loading {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 11px;
+        }
+        .worldmap-svg {
+            width: 100%;
+            height: auto;
+            background: #c9e4f0;
             border-radius: 8px;
-            margin-top: 16px;
-            border: 1px solid #f0d8b0;
+        }
+        #radarChart {
+            display: block;
+            margin: 0 auto;
+        }
+        .small-country-marker {
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>🌾 耕地 · 人口 · 农业产量（2001-2020）</h1>
-    <div class="sub">点击任意国家圆圈查看详细信息 | 人口大国是否拥有更多耕地？</div>
+    <h1>🌾 耕地 · 人口 · 粮食安全：探究世界农业格局</h1>
+    <div class="sub">点击任意国家圆圈查看详情 | 圆圈大小 = 耕地产量（耕地面积 × 谷物单产）</div>
 
     <div class="controls">
         <div class="control-group">
             <label>📅 年份:</label>
-            <input type="range" id="yearSlider" class="year-slider" min="2001" max="2020" step="1" value="2015">
+            <input type="range" id="yearSlider" class="year-slider" min="2002" max="2020" step="1" value="2015">
             <span id="yearValue">2015</span>
         </div>
         <div class="control-group">
@@ -226,51 +330,46 @@
             </select>
         </div>
         <div class="control-group">
-            <label>选择国家:</label>
+            <label>🇺🇳 国家:</label>
             <select id="countrySelect" class="country-select">
                 <option value="">-- 选择国家 --</option>
             </select>
         </div>
-        <div class="control-group indicator-buttons">
-            <label>📊 指标:</label>
+        <div class="indicator-buttons">
             <button id="btnProduction" class="active">生产指数</button>
             <button id="btnMalnutrition">营养不良率</button>
         </div>
-        <button id="resetBtn">重置筛选</button>
-        <button id="clearSelectionBtn" style="background:#95a5a6;">清除选中</button>
+        <div class="color-mode-buttons">
+            <button id="btnColorRegion" class="active">大洲</button>
+            <button id="btnColorTrade">贸易角色</button>
+        </div>
+        <button id="resetBtn">重置</button>
+        <button id="clearSelectionBtn" style="background:#95a5a6;">清除</button>
     </div>
 
     <div class="viz-container">
         <div id="scatterplot"></div>
         <div class="info-panel" id="infoPanel">
-            <h3>📌 国家详情</h3>
-            <p>✨ <strong>点击任意圆圈</strong> 查看详细信息</p>
-            <p style="font-size:12px; color:#888; margin-top:16px;">
-                💡 提示：<br>
-                • 圆圈大小 = 耕地面积（万平方公里）<br>
-                • 颜色 = 地理区域<br>
-                • 点击后圆圈会高亮显示
-            </p>
+            <div class="panel-header">
+                <h3 id="panelTitle">📌 国家详情</h3>
+                <div class="badge-row" id="badgeRow"></div>
+            </div>
+            <div class="scroll-content" id="panelScrollContent">
+                <div id="panelContent">
+                    <p style="font-size:11px; color:#888; margin-top:8px; text-align:center;">✨ 点击圆圈查看详情</p>
+                </div>
+                <div class="worldmap-mini" id="worldmapMini" style="display: none;">
+                    <p>🗺️ 国家地理位置 (真实世界地图)</p>
+                    <div id="miniMap"></div>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="legend">
-        <span><span class="legend-color" style="background:#1f77b4;"></span> 非洲</span>
-        <span><span class="legend-color" style="background:#ff7f0e;"></span> 亚洲</span>
-        <span><span class="legend-color" style="background:#2ca02c;"></span> 欧洲</span>
-        <span><span class="legend-color" style="background:#d62728;"></span> 北美洲</span>
-        <span><span class="legend-color" style="background:#9467bd;"></span> 南美洲</span>
-        <span><span class="legend-color" style="background:#8c564b;"></span> 大洋洲</span>
-        <span><span class="legend-color" style="background:#e377c2;"></span> 加勒比</span>
-        <span>⚪ 圆圈大小 = 耕地面积 (万 km²)</span>
-        <span>⚫ 黑色边框 = 当前选中</span>
-    </div>
+    <div class="legend" id="legend"></div>
     <footer>
-        数据来源：World Bank Open Data (2001-2020) | 可视化说明：X轴=人口(对数)，气泡大小=耕地面积，颜色=区域
+        数据来源：World Bank Open Data | X轴=人口(对数) | 圆圈大小=耕地产量(万吨) | 右侧雷达图含人口、进出口占比
     </footer>
-    <div class="note">
-        💡 交互说明：<strong>点击圆圈</strong>查看详情，选中后圆圈会显示黑色边框；年份/筛选器切换后选中状态自动清除<br>
-        📊 可切换两种指标：生产指数（反映农业产出压力）和营养不良率（直接反映粮食安全状况）
-    </div>
+    <div class="note">💡 可切换Y轴指标和颜色模式 | 雷达图外圈=表现更好 | 世界地图基于自然地球数据 | 营养不良率数值越小雷达图越靠内（表示粮食安全状况越好）</div>
 </div>
 
 <script>
@@ -279,12 +378,343 @@
     let regionFilter = "all";
     let incomeFilter = "all";
     let selectedCountry = null;
-    let currentYAxis = "production"; // "production" 或 "malnutrition"
+    let currentYAxis = "production";
+    let currentColorMode = "region";
+    let worldMapData = null;
+    let precomputedCentroids = {};
     
     let allCountriesList = [];
+    let globalMaxValues = {};
 
-    const width = 900, height = 550;
-    const margin = { top: 50, right: 90, bottom: 70, left: 80 };
+    // 小岛国/面积太小国家的备用坐标
+    const smallCountryCoords = {
+        "Malta": [14.5, 35.9],
+        "Singapore": [103.8, 1.3],
+        "Bahrain": [50.5, 26.0],
+        "Cyprus": [33.4, 35.2],
+        "Mauritius": [57.5, -20.2],
+        "Fiji": [178.5, -18.1],
+        "Trinidad and Tobago": [-61.2, 10.7],
+        "Jamaica": [-77.3, 18.1],
+        "Bahamas": [-77.4, 25.1],
+        "Barbados": [-59.6, 13.2],
+        "Iceland": [-19.0, 65.0],
+        "Luxembourg": [6.1, 49.8],
+        "Brunei": [114.7, 4.5],
+        "Cabo Verde": [-23.5, 15.0],
+        "Seychelles": [55.5, -4.6],
+        "Comoros": [43.2, -11.6],
+        "Vanuatu": [168.3, -15.4],
+        "Samoa": [-172.0, -13.6],
+        "Tonga": [-175.2, -21.1],
+        "Kiribati": [-157.0, 1.4],
+        "Marshall Islands": [171.2, 7.1],
+        "Palau": [134.5, 7.5],
+        "Nauru": [166.9, -0.5],
+        "Tuvalu": [179.2, -7.5],
+        "Micronesia": [158.2, 6.9],
+        "Solomon Islands": [160.2, -9.5]
+    };
+
+    // 完整的世界银行国家名称 -> 地图中的标准名称映射
+    const countryNameMapping = {
+        // ========== 刚果（重要：必须精确映射） ==========
+        "Congo, Dem. Rep.": "Democratic Republic of the Congo",
+        "Congo, Democratic Republic": "Democratic Republic of the Congo",
+        "DR Congo": "Democratic Republic of the Congo",
+        "Democratic Republic of the Congo": "Democratic Republic of the Congo",
+        "Congo, Rep.": "Republic of the Congo",
+        "Congo": "Republic of the Congo",
+        "Republic of the Congo": "Republic of the Congo",
+        
+        // ========== 亚洲 ==========
+        "Viet Nam": "Vietnam",
+        "Vietnam": "Vietnam",
+        "Lao PDR": "Laos",
+        "Laos": "Laos",
+        "Brunei Darussalam": "Brunei",
+        "Brunei": "Brunei",
+        "Korea, Rep.": "South Korea",
+        "South Korea": "South Korea",
+        "Korea, Dem. People's Rep.": "North Korea",
+        "North Korea": "North Korea",
+        "Iran, Islamic Rep.": "Iran",
+        "Iran": "Iran",
+        "Syrian Arab Republic": "Syria",
+        "Syria": "Syria",
+        "Myanmar": "Myanmar",
+        "Burma": "Myanmar",
+        "Timor-Leste": "Timor-Leste",
+        "Afghanistan": "Afghanistan",
+        "Uzbekistan": "Uzbekistan",
+        "Kazakhstan": "Kazakhstan",
+        "Kyrgyz Republic": "Kyrgyzstan",
+        "Kyrgyzstan": "Kyrgyzstan",
+        "Tajikistan": "Tajikistan",
+        "Turkmenistan": "Turkmenistan",
+        "Maldives": "Maldives",
+        "Bhutan": "Bhutan",
+        "Mongolia": "Mongolia",
+        "Cambodia": "Cambodia",
+        "Sri Lanka": "Sri Lanka",
+        "Nepal": "Nepal",
+        "Malaysia": "Malaysia",
+        "Thailand": "Thailand",
+        "Philippines": "Philippines",
+        "Indonesia": "Indonesia",
+        "Pakistan": "Pakistan",
+        "Bangladesh": "Bangladesh",
+        "India": "India",
+        "China": "China",
+        "Japan": "Japan",
+        "Singapore": "Singapore",
+        "Hong Kong SAR, China": "Hong Kong",
+        "Macao SAR, China": "Macao",
+        
+        // ========== 欧洲 ==========
+        "Russian Federation": "Russia",
+        "Russia": "Russia",
+        "Czechia": "Czechia",
+        "Czech Republic": "Czechia",
+        "Slovak Republic": "Slovakia",
+        "Slovakia": "Slovakia",
+        "North Macedonia": "North Macedonia",
+        "Macedonia": "North Macedonia",
+        "Türkiye": "Turkey",
+        "Turkey": "Turkey",
+        "Turkiye": "Turkey",
+        "United Kingdom": "United Kingdom",
+        "Bosnia and Herzegovina": "Bosnia and Herzegovina",
+        "Germany": "Germany",
+        "France": "France",
+        "Italy": "Italy",
+        "Spain": "Spain",
+        "Portugal": "Portugal",
+        "Netherlands": "Netherlands",
+        "Belgium": "Belgium",
+        "Switzerland": "Switzerland",
+        "Austria": "Austria",
+        "Poland": "Poland",
+        "Hungary": "Hungary",
+        "Romania": "Romania",
+        "Bulgaria": "Bulgaria",
+        "Greece": "Greece",
+        "Sweden": "Sweden",
+        "Norway": "Norway",
+        "Denmark": "Denmark",
+        "Finland": "Finland",
+        "Ireland": "Ireland",
+        "Iceland": "Iceland",
+        "Luxembourg": "Luxembourg",
+        "Malta": "Malta",
+        "Cyprus": "Cyprus",
+        "Estonia": "Estonia",
+        "Latvia": "Latvia",
+        "Lithuania": "Lithuania",
+        "Slovenia": "Slovenia",
+        "Croatia": "Croatia",
+        "Serbia": "Serbia",
+        "Montenegro": "Montenegro",
+        "Albania": "Albania",
+        "Moldova": "Moldova",
+        "Georgia": "Georgia",
+        "Armenia": "Armenia",
+        "Azerbaijan": "Azerbaijan",
+        "Belarus": "Belarus",
+        "Ukraine": "Ukraine",
+        "Kosovo": "Kosovo",
+        "Monaco": "Monaco",
+        "San Marino": "San Marino",
+        "Andorra": "Andorra",
+        "Liechtenstein": "Liechtenstein",
+        
+        // ========== 非洲 ==========
+        "Côte d'Ivoire": "Côte d'Ivoire",
+        "Ivory Coast": "Côte d'Ivoire",
+        "Cote d'Ivoire": "Côte d'Ivoire",
+        "Eswatini": "Eswatini",
+        "Swaziland": "Eswatini",
+        "Cabo Verde": "Cape Verde",
+        "Cape Verde": "Cape Verde",
+        "São Tomé and Principe": "São Tomé and Principe",
+        "Somalia, Fed. Rep.": "Somalia",
+        "Somalia": "Somalia",
+        "West Bank and Gaza": "Palestine",
+        "Palestine": "Palestine",
+        "Egypt, Arab Rep.": "Egypt",
+        "Egypt": "Egypt",
+        "Nigeria": "Nigeria",
+        "Ethiopia": "Ethiopia",
+        "South Africa": "South Africa",
+        "Tanzania": "Tanzania",
+        "Kenya": "Kenya",
+        "Uganda": "Uganda",
+        "Algeria": "Algeria",
+        "Sudan": "Sudan",
+        "Morocco": "Morocco",
+        "Angola": "Angola",
+        "Ghana": "Ghana",
+        "Mozambique": "Mozambique",
+        "Madagascar": "Madagascar",
+        "Cameroon": "Cameroon",
+        "Zambia": "Zambia",
+        "Zimbabwe": "Zimbabwe",
+        "Senegal": "Senegal",
+        "Chad": "Chad",
+        "South Sudan": "South Sudan",
+        "Rwanda": "Rwanda",
+        "Benin": "Benin",
+        "Burundi": "Burundi",
+        "Tunisia": "Tunisia",
+        "Libya": "Libya",
+        "Liberia": "Liberia",
+        "Mauritania": "Mauritania",
+        "Malawi": "Malawi",
+        "Niger": "Niger",
+        "Mali": "Mali",
+        "Burkina Faso": "Burkina Faso",
+        "Sierra Leone": "Sierra Leone",
+        "Togo": "Togo",
+        "Central African Republic": "Central African Republic",
+        "Eritrea": "Eritrea",
+        "Djibouti": "Djibouti",
+        "Equatorial Guinea": "Equatorial Guinea",
+        "Gabon": "Gabon",
+        "Botswana": "Botswana",
+        "Namibia": "Namibia",
+        "Mauritius": "Mauritius",
+        "Seychelles": "Seychelles",
+        "Comoros": "Comoros",
+        "Guinea": "Guinea",
+        "Guinea-Bissau": "Guinea-Bissau",
+        
+        // ========== 北美洲 ==========
+        "United States": "United States of America",
+        "United States of America": "United States of America",
+        "USA": "United States of America",
+        "US": "United States of America",
+        "Bahamas, The": "Bahamas",
+        "Bahamas": "Bahamas",
+        "Gambia, The": "Gambia",
+        "Gambia": "Gambia",
+        "Canada": "Canada",
+        "Mexico": "Mexico",
+        "Greenland": "Greenland",
+        "Bermuda": "Bermuda",
+        "Cayman Islands": "Cayman Islands",
+        "Faroe Islands": "Faroe Islands",
+        "Gibraltar": "Gibraltar",
+        "Guam": "Guam",
+        "New Caledonia": "New Caledonia",
+        "French Polynesia": "French Polynesia",
+        "Northern Mariana Islands": "Northern Mariana Islands",
+        "American Samoa": "American Samoa",
+        "Puerto Rico (US)": "Puerto Rico",
+        "Puerto Rico": "Puerto Rico",
+        
+        // ========== 南美洲 ==========
+        "Venezuela, RB": "Venezuela",
+        "Venezuela": "Venezuela",
+        "Bolivia": "Bolivia",
+        "Bolivia, Plurinational State of": "Bolivia",
+        "Brazil": "Brazil",
+        "Argentina": "Argentina",
+        "Colombia": "Colombia",
+        "Peru": "Peru",
+        "Chile": "Chile",
+        "Ecuador": "Ecuador",
+        "Paraguay": "Paraguay",
+        "Uruguay": "Uruguay",
+        "Guyana": "Guyana",
+        "Suriname": "Suriname",
+        
+        // ========== 大洋洲 ==========
+        "Micronesia, Fed. Sts.": "Micronesia",
+        "Micronesia": "Micronesia",
+        "Marshall Islands": "Marshall Islands",
+        "Palau": "Palau",
+        "Nauru": "Nauru",
+        "Tuvalu": "Tuvalu",
+        "Fiji": "Fiji",
+        "Samoa": "Samoa",
+        "Tonga": "Tonga",
+        "Vanuatu": "Vanuatu",
+        "Solomon Islands": "Solomon Islands",
+        "Papua New Guinea": "Papua New Guinea",
+        "Kiribati": "Kiribati",
+        "Australia": "Australia",
+        "New Zealand": "New Zealand",
+        
+        // ========== 加勒比 ==========
+        "Antigua and Barbuda": "Antigua and Barbuda",
+        "Barbados": "Barbados",
+        "Dominica": "Dominica",
+        "Grenada": "Grenada",
+        "St. Kitts and Nevis": "Saint Kitts and Nevis",
+        "Saint Kitts and Nevis": "Saint Kitts and Nevis",
+        "St. Lucia": "Saint Lucia",
+        "Saint Lucia": "Saint Lucia",
+        "St. Vincent and the Grenadines": "Saint Vincent and the Grenadines",
+        "Saint Vincent and the Grenadines": "Saint Vincent and the Grenadines",
+        "Trinidad and Tobago": "Trinidad and Tobago",
+        "Jamaica": "Jamaica",
+        "Haiti": "Haiti",
+        "Dominican Republic": "Dominican Republic",
+        "Cuba": "Cuba",
+        
+        // ========== 中东 ==========
+        "Oman": "Oman",
+        "Saudi Arabia": "Saudi Arabia",
+        "Yemen, Rep.": "Yemen",
+        "Yemen": "Yemen",
+        "United Arab Emirates": "United Arab Emirates",
+        "Qatar": "Qatar",
+        "Kuwait": "Kuwait",
+        "Bahrain": "Bahrain",
+        "Jordan": "Jordan",
+        "Lebanon": "Lebanon",
+        "Iraq": "Iraq",
+        "Israel": "Israel"
+    };
+
+    // 需要排除包含匹配的国家对（避免混淆）
+    const ambiguousPairs = [
+        { short: "oman", long: "romania" },
+        { short: "mal", long: "malaysia" },
+        { short: "mal", long: "malawi" },
+        { short: "mal", long: "maldives" },
+        { short: "sin", long: "singapore" },
+        { short: "ind", long: "india" },
+        { short: "ind", long: "indonesia" },
+        { short: "sud", long: "sudan" },
+        { short: "sud", long: "south sudan" },
+        { short: "guin", long: "guinea" },
+        { short: "guin", long: "guinea-bissau" },
+        { short: "equat", long: "equatorial guinea" },
+    ];
+
+    // 检查是否属于歧义匹配（避免误匹配）
+    function isAmbiguousMatch(shortName, longName) {
+        const shortLower = shortName.toLowerCase();
+        const longLower = longName.toLowerCase();
+        
+        if (shortLower.length < 4) return true;
+        
+        for (let pair of ambiguousPairs) {
+            if ((shortLower.includes(pair.short) || pair.short.includes(shortLower)) &&
+                (longLower.includes(pair.long) || pair.long.includes(longLower))) {
+                return true;
+            }
+            if ((shortLower.includes(pair.long) || pair.long.includes(shortLower)) &&
+                (longLower.includes(pair.short) || pair.short.includes(longLower))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    const width = 880, height = 540;
+    const margin = { top: 45, right: 80, bottom: 60, left: 70 };
 
     const svg = d3.select("#scatterplot")
         .append("svg")
@@ -297,12 +727,291 @@
         .attr("class", "tooltip")
         .style("opacity", 0);
 
+    // 加载世界地图
+    const worldMapUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json";
+    
+    function loadWorldMap() {
+        const mapContainer = document.getElementById("miniMap");
+        if (!mapContainer) return;
+        
+        mapContainer.innerHTML = '<div class="map-loading">🌍 加载世界地图中...</div>';
+        
+        d3.json(worldMapUrl).then(worldData => {
+            worldMapData = worldData;
+            console.log("世界地图加载成功");
+            precomputeCentroids();
+            if (selectedCountry) {
+                drawRealWorldMap(selectedCountry);
+            }
+        }).catch(err => {
+            console.error("世界地图加载失败:", err);
+            mapContainer.innerHTML = '<div class="map-loading" style="color:#e74c3c;">⚠️ 地图加载失败，请检查网络连接</div>';
+            loadBackupMap();
+        });
+    }
+
+    function loadBackupMap() {
+        const backupUrl = "https://unpkg.com/world-atlas@2.0.2/countries-110m.json";
+        d3.json(backupUrl).then(worldData => {
+            worldMapData = worldData;
+            console.log("世界地图从备用源加载成功");
+            precomputeCentroids();
+            if (selectedCountry) {
+                drawRealWorldMap(selectedCountry);
+            }
+        }).catch(err => {
+            console.error("备用地图加载也失败:", err);
+        });
+    }
+
+    function precomputeCentroids() {
+        if (!worldMapData) return;
+        
+        const mapWidth = 415, mapHeight = 220;
+        const projection = d3.geoEquirectangular()
+            .scale(mapWidth / (2 * Math.PI))
+            .translate([mapWidth / 2, mapHeight / 2]);
+        
+        const geoPath = d3.geoPath().projection(projection);
+        const countries = topojson.feature(worldMapData, worldMapData.objects.countries);
+        
+        countries.features.forEach(feature => {
+            const name = feature.properties.name;
+            if (name) {
+                try {
+                    const centroid = geoPath.centroid(feature);
+                    if (centroid && !isNaN(centroid[0]) && !isNaN(centroid[1]) &&
+                        centroid[0] > 0 && centroid[0] < mapWidth &&
+                        centroid[1] > 0 && centroid[1] < mapHeight) {
+                        precomputedCentroids[name] = centroid;
+                    }
+                } catch(e) {}
+            }
+        });
+        
+        console.log(`预计算了 ${Object.keys(precomputedCentroids).length} 个国家的中心坐标`);
+    }
+
+    // 获取高亮国家的名称
+    function getHighlightedCountryName(countryName) {
+        return countryNameMapping[countryName] || countryName;
+    }
+
+    // 标准化字符串（移除变音符号）
+    function normalizeString(str) {
+        if (!str) return "";
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    // 检查两个国家名称是否匹配（增强版：支持包含匹配，但避免歧义）
+    function isCountryMatch(mapName, targetName) {
+        if (!mapName || !targetName) return false;
+        
+        // 1. 精确匹配
+        if (mapName === targetName) return true;
+        
+        // 2. 不区分大小写匹配
+        if (mapName.toLowerCase() === targetName.toLowerCase()) return true;
+        
+        // 3. 标准化匹配（移除变音符号）
+        if (normalizeString(mapName) === normalizeString(targetName)) return true;
+        
+        // 4. 包含匹配（仅当没有歧义时）
+        const targetLower = targetName.toLowerCase();
+        const mapLower = mapName.toLowerCase();
+        
+        // 检查是否是歧义匹配（避免 Oman 匹配 Romania 等）
+        if (isAmbiguousMatch(targetName, mapName)) {
+            return false;
+        }
+        
+        // 包含匹配：目标名称包含在地图名称中，或地图名称包含在目标名称中
+        if (mapLower.includes(targetLower) || targetLower.includes(mapLower)) {
+            // 额外检查：避免太短的名称匹配（如 "us" 匹配 "russia"）
+            if (targetLower.length >= 4 || mapLower.length >= 4) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    // 绘制真实世界地图
+    function drawRealWorldMap(countryName) {
+        const container = document.getElementById("miniMap");
+        if (!container || !worldMapData) return;
+        
+        container.innerHTML = "";
+        
+        const mapWidth = 415, mapHeight = 220;
+        
+        const mapSvg = d3.select("#miniMap")
+            .append("svg")
+            .attr("width", mapWidth)
+            .attr("height", mapHeight)
+            .attr("viewBox", `0 0 ${mapWidth} ${mapHeight}`)
+            .attr("class", "worldmap-svg")
+            .style("display", "block")
+            .style("margin", "0 auto");
+        
+        const projection = d3.geoEquirectangular()
+            .scale(mapWidth / (2 * Math.PI))
+            .translate([mapWidth / 2, mapHeight / 2])
+            .precision(1);
+        
+        const geoPath = d3.geoPath().projection(projection);
+        const countries = topojson.feature(worldMapData, worldMapData.objects.countries);
+        
+        // 先尝试使用映射，如果没有映射则使用原名称
+        let targetName = getHighlightedCountryName(countryName);
+        console.log(`高亮国家: ${countryName} -> 映射到: ${targetName}`);
+        
+        // 海洋背景
+        mapSvg.append("rect")
+            .attr("width", mapWidth)
+            .attr("height", mapHeight)
+            .attr("fill", "#c9e4f0");
+        
+        let highlightedFeature = null;
+        
+        // 绘制所有国家
+        mapSvg.selectAll(".country-boundary")
+            .data(countries.features)
+            .enter()
+            .append("path")
+            .attr("class", "country-boundary")
+            .attr("d", geoPath)
+            .attr("fill", d => {
+                const mapName = d.properties?.name;
+                if (isCountryMatch(mapName, targetName)) {
+                    if (!highlightedFeature) {
+                        highlightedFeature = d;
+                        console.log(`匹配成功: ${mapName} == ${targetName}`);
+                    }
+                    return "#e67e22";
+                }
+                return "#d0e6a0";
+            })
+            .attr("stroke", d => {
+                const mapName = d.properties?.name;
+                if (isCountryMatch(mapName, targetName)) return "#b9450c";
+                return "#888";
+            })
+            .attr("stroke-width", d => {
+                const mapName = d.properties?.name;
+                if (isCountryMatch(mapName, targetName)) return "2";
+                return "0.5";
+            })
+            .attr("opacity", 0.85);
+        
+        // 经纬网格线
+        const graticule = d3.geoGraticule().step([30, 30]);
+        mapSvg.append("path")
+            .datum(graticule)
+            .attr("d", geoPath)
+            .attr("fill", "none")
+            .attr("stroke", "#a0c4e0")
+            .attr("stroke-width", 0.5)
+            .attr("opacity", 0.4);
+        
+        // 获取中心坐标
+        let centroid = null;
+        
+        if (highlightedFeature) {
+            centroid = precomputedCentroids[highlightedFeature.properties.name];
+            if (!centroid) {
+                centroid = geoPath.centroid(highlightedFeature);
+            }
+            if (!centroid || isNaN(centroid[0]) || isNaN(centroid[1])) {
+                try {
+                    const bounds = geoPath.bounds(highlightedFeature);
+                    if (bounds && bounds[0] && bounds[1]) {
+                        centroid = [
+                            (bounds[0][0] + bounds[1][0]) / 2,
+                            (bounds[0][1] + bounds[1][1]) / 2
+                        ];
+                    }
+                } catch(e) {}
+            }
+        }
+        
+        // 检查是否是小岛国
+        const isSmallCountry = smallCountryCoords[countryName] || smallCountryCoords[targetName];
+        
+        if ((!highlightedFeature || isSmallCountry) && smallCountryCoords[countryName]) {
+            const coords = smallCountryCoords[countryName];
+            if (coords) {
+                const projected = projection(coords);
+                if (projected && !isNaN(projected[0]) && !isNaN(projected[1])) {
+                    centroid = projected;
+                }
+            }
+        }
+        
+        // 添加标签
+        if (centroid && !isNaN(centroid[0]) && !isNaN(centroid[1]) &&
+            centroid[0] > 0 && centroid[0] < mapWidth &&
+            centroid[1] > 0 && centroid[1] < mapHeight) {
+            
+            if (isSmallCountry) {
+                mapSvg.append("circle")
+                    .attr("cx", centroid[0])
+                    .attr("cy", centroid[1])
+                    .attr("r", 8)
+                    .attr("fill", "#e67e22")
+                    .attr("opacity", 0.4)
+                    .attr("stroke", "#b9450c")
+                    .attr("stroke-width", 1);
+                
+                mapSvg.append("circle")
+                    .attr("cx", centroid[0])
+                    .attr("cy", centroid[1])
+                    .attr("r", 3)
+                    .attr("fill", "#e67e22")
+                    .attr("stroke", "white")
+                    .attr("stroke-width", 1);
+            }
+            
+            mapSvg.append("text")
+                .attr("x", centroid[0])
+                .attr("y", centroid[1] - (isSmallCountry ? 12 : 5))
+                .attr("text-anchor", "middle")
+                .attr("font-size", "10px")
+                .attr("fill", "#ffffff")
+                .attr("font-weight", "bold")
+                .style("text-shadow", "0 0 2px #000000, 1px 1px 1px #000000")
+                .text(countryName);
+        } else if (highlightedFeature) {
+            mapSvg.append("text")
+                .attr("x", mapWidth / 2)
+                .attr("y", mapHeight - 15)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "10px")
+                .attr("fill", "#ffffff")
+                .attr("font-weight", "bold")
+                .style("text-shadow", "0 0 2px #000000")
+                .text(countryName);
+        } else {
+            mapSvg.append("text")
+                .attr("x", mapWidth / 2)
+                .attr("y", mapHeight - 15)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "9px")
+                .attr("fill", "#999")
+                .text(countryName);
+        }
+    }
+
+    // 加载数据
     d3.json("data/agricultural_data.json").then(data => {
         fullData = data.data;
         console.log("数据加载成功，共", fullData.length, "条记录");
+        console.log("数据中的国家名称示例:", [...new Set(fullData.map(d => d.country))].slice(0, 30));
+        
+        calculateGlobalMaxValues();
         
         const countrySet = new Set();
-        fullData.forEach(d => { countrySet.add(d.country); });
+        fullData.forEach(d => { if(d.country) countrySet.add(d.country); });
         allCountriesList = Array.from(countrySet).sort();
         
         const countrySelect = d3.select("#countrySelect");
@@ -310,12 +1019,39 @@
             countrySelect.append("option").attr("value", country).text(country);
         });
         
+        loadWorldMap();
+        
         drawVisualization();
         setupEventListeners();
     }).catch(err => {
         console.error("数据加载失败:", err);
         document.getElementById("scatterplot").innerHTML = "<p style='color:red'>⚠️ 数据加载失败，请确保 data/agricultural_data.json 存在</p>";
     });
+
+    function calculateGlobalMaxValues() {
+        let maxProd = 0, maxArea = 0, maxYield = 0, maxSupply = 0, maxMal = 0, maxExport = 0, maxImport = 0, maxPop = 0;
+        fullData.forEach(d => {
+            if (d.cropProduction && d.cropProduction > maxProd) maxProd = d.cropProduction;
+            if (d.agriculturalLandArea && d.agriculturalLandArea > maxArea) maxArea = d.agriculturalLandArea;
+            if (d.cerealYield && d.cerealYield > maxYield) maxYield = d.cerealYield;
+            if (d.foodProductionPerCapita && d.foodProductionPerCapita * 10 > maxSupply) maxSupply = d.foodProductionPerCapita * 10;
+            if (d.undernourishment && d.undernourishment > maxMal) maxMal = d.undernourishment;
+            if (d.foodExport && d.foodExport > maxExport) maxExport = d.foodExport;
+            if (d.foodImport && d.foodImport > maxImport) maxImport = d.foodImport;
+            if (d.population && d.population > maxPop) maxPop = d.population;
+        });
+        globalMaxValues = { 
+            cropProduction: maxProd, 
+            agriculturalLandArea: maxArea, 
+            cerealYield: maxYield, 
+            supply: maxSupply, 
+            undernourishment: maxMal,
+            foodExport: maxExport,
+            foodImport: maxImport,
+            population: maxPop
+        };
+        console.log("全局最大值:", globalMaxValues);
+    }
 
     function setupEventListeners() {
         d3.select("#yearSlider").on("input", function() {
@@ -347,16 +1083,10 @@
             selectedCountry = null;
             d3.select("#countrySelect").property("value", "");
             drawVisualization();
-            document.getElementById("infoPanel").innerHTML = `
-                <h3>📌 国家详情</h3>
-                <p>✨ <strong>点击任意圆圈</strong> 查看详细信息</p>
-                <p style="font-size:12px; color:#888; margin-top:16px;">
-                    💡 提示：<br>
-                    • 圆圈大小 = 耕地面积（万平方公里）<br>
-                    • 颜色 = 地理区域<br>
-                    • 点击后圆圈会高亮显示
-                </p>
-            `;
+            document.getElementById("panelTitle").innerHTML = "📌 国家详情";
+            document.getElementById("badgeRow").innerHTML = "";
+            document.getElementById("panelContent").innerHTML = '<p style="font-size:11px; color:#888; margin-top:8px; text-align:center;">✨ 点击圆圈查看详情</p>';
+            document.getElementById("worldmapMini").style.display = "none";
         });
         
         d3.select("#btnProduction").on("click", function() {
@@ -373,285 +1103,389 @@
             selectedCountry = null;
             drawVisualization();
         });
+        d3.select("#btnColorRegion").on("click", function() {
+            currentColorMode = "region";
+            d3.select("#btnColorRegion").classed("active", true);
+            d3.select("#btnColorTrade").classed("active", false);
+            drawVisualization();
+        });
+        d3.select("#btnColorTrade").on("click", function() {
+            currentColorMode = "trade";
+            d3.select("#btnColorRegion").classed("active", false);
+            d3.select("#btnColorTrade").classed("active", true);
+            drawVisualization();
+        });
         
         d3.select("#countrySelect").on("change", function() {
-            const selectedCountryName = this.value;
-            if (!selectedCountryName) return;
-            
-            const countryData = fullData.find(d => d.country === selectedCountryName && d.year === currentYear);
-            if (!countryData) {
-                console.warn("未找到该国家在", currentYear, "年的数据");
-                return;
-            }
-            
+            const name = this.value;
+            if (!name) return;
+            const countryData = fullData.find(d => d.country === name && d.year === currentYear);
+            if (!countryData) return;
             regionFilter = countryData.region;
             incomeFilter = countryData.incomeGroup;
             d3.select("#regionFilter").property("value", regionFilter);
             d3.select("#incomeFilter").property("value", incomeFilter);
-            selectedCountry = selectedCountryName;
+            selectedCountry = name;
             drawVisualization();
-            
             setTimeout(() => {
                 svg.selectAll(".country-circle")
                     .attr("stroke", c => (c && c.country === selectedCountry) ? "#000000" : "#333")
-                    .attr("stroke-width", c => (c && c.country === selectedCountry) ? 3 : 0.8);
+                    .attr("stroke-width", c => (c && c.country === selectedCountry) ? 2.5 : 0.6);
             }, 50);
         });
     }
 
-    function updateInfoPanel(countryData) {
-        var areaDisplay = (countryData.agriculturalLandArea && countryData.agriculturalLandArea > 0) 
-            ? countryData.agriculturalLandArea.toFixed(5) + " 万 km²" 
-            : "数据缺失";
-        
-        var yMetricHtml = "";
-        if (currentYAxis === "production") {
-            var supplyScaled = countryData.foodProductionPerCapita * 10;
-            yMetricHtml = `
-                <p>🧑‍🌾 <strong>农业生产供给力度</strong><br>
-                <span class="highlight">${supplyScaled.toFixed(2)}</span><br>
-                <small>📊 数值越高 → 农业生产供给力度越强，越能支撑人口需求</small></p>
-            `;
+    function getTradeBadge(role) {
+        const map = {
+            "Net Exporter (Strong)": { text: "强劲出口国", color: "#27ae60", bg: "#27ae6020" },
+            "Net Exporter": { text: "净出口国", color: "#2ecc71", bg: "#2ecc7120" },
+            "Net Importer (Heavy)": { text: "严重进口依赖", color: "#e74c3c", bg: "#e74c3c20" },
+            "Net Importer": { text: "净进口国", color: "#e67e22", bg: "#e67e2220" },
+            "Balanced": { text: "基本平衡", color: "#95a5a6", bg: "#95a5a620" },
+            "No data": { text: "数据缺失", color: "#7f8c8d", bg: "#7f8c8d20" }
+        };
+        return map[role] || { text: role || "未知", color: "#7f8c8d", bg: "#7f8c8d20" };
+    }
+
+    function getYValue(d) {
+        if (currentYAxis === "production") return d.foodProductionPerCapita ? d.foodProductionPerCapita * 10 : null;
+        return (d.undernourishment !== null && d.undernourishment !== undefined) ? d.undernourishment : null;
+    }
+
+    function getYAxisLabel() {
+        return currentYAxis === "production" ? "📊 农业生产供给力度" : "⚠️ 营养不良率 (%)";
+    }
+
+    function getAssessmentLevel(value, type) {
+        if (type === "production") {
+            if (value >= 50) return { level: "供给非常充足", color: "#27ae60", emoji: "🟢" };
+            if (value >= 20) return { level: "供给充足", color: "#2ecc71", emoji: "🟡" };
+            if (value >= 5) return { level: "供给基本满足", color: "#f39c12", emoji: "🟠" };
+            return { level: "供给压力较大", color: "#e74c3c", emoji: "🔴" };
         } else {
-            var malValue = countryData.undernourishment;
-            if (malValue == null) {
-                yMetricHtml = `<p>⚠️ <strong>营养不良率</strong><br><span class="highlight">数据缺失</span><br><small>该年份暂无营养不良率数据</small></p>`;
-            } else {
-                var malStatus = malValue < 2.5 ? "粮食安全状况良好 🟢" : 
-                                malValue < 10 ? "粮食安全面临压力 🟡" : 
-                                malValue < 20 ? "粮食不安全情况严重 🟠" : "粮食危机 🔴";
-                yMetricHtml = `
-                    <p>⚠️ <strong>营养不良率</strong><br>
-                    <span class="highlight">${malValue.toFixed(1)}%</span><br>
-                    <small>数值越低 → 粮食安全状况越好</small><br>
-                    <small>评估: ${malStatus}</small></p>
-                `;
-            }
+            if (value < 2.5) return { level: "粮食安全状况良好", color: "#27ae60", emoji: "🟢" };
+            if (value < 10) return { level: "粮食安全面临压力", color: "#f39c12", emoji: "🟠" };
+            if (value < 20) return { level: "粮食不安全情况严重", color: "#e67e22", emoji: "🟠" };
+            return { level: "粮食危机", color: "#e74c3c", emoji: "🔴" };
+        }
+    }
+
+    function drawRadarChart(countryData) {
+        d3.select("#radarChart").remove();
+        const container = document.getElementById("radarContainer");
+        if (!container) return;
+        
+        container.innerHTML = '<svg id="radarChart" width="380" height="280" viewBox="0 0 380 280"></svg>';
+        const radarSvg = d3.select("#radarChart");
+        const cx = 190, cy = 140, radius = 100;
+        
+        let prodActual = countryData.cropProduction ? (countryData.cropProduction / 10000).toFixed(2) + "亿吨" : "N/A";
+        let areaActual = countryData.agriculturalLandArea ? countryData.agriculturalLandArea.toFixed(0) + "万km²" : "N/A";
+        let yieldActual = countryData.cerealYield ? countryData.cerealYield.toFixed(0) + "kg/ha" : "N/A";
+        let supplyActual = countryData.foodProductionPerCapita ? (countryData.foodProductionPerCapita * 10).toFixed(1) : "N/A";
+        let malActual = countryData.undernourishment ? countryData.undernourishment.toFixed(1) + "%" : "N/A";
+        let exportActual = countryData.foodExport ? countryData.foodExport.toFixed(1) + "%" : "N/A";
+        let importActual = countryData.foodImport ? countryData.foodImport.toFixed(1) + "%" : "N/A";
+        let popActual = countryData.population ? (countryData.population / 1e8).toFixed(2) + "亿人" : "N/A";
+        
+        let prod = countryData.cropProduction || 0;
+        let area = countryData.agriculturalLandArea || 0;
+        let yieldV = countryData.cerealYield || 0;
+        let supply = countryData.foodProductionPerCapita ? countryData.foodProductionPerCapita * 10 : 0;
+        let mal = countryData.undernourishment || 0;
+        let exp = countryData.foodExport || 0;
+        let imp = countryData.foodImport || 0;
+        let pop = countryData.population || 0;
+        
+        let normProd = Math.min(1, prod / (globalMaxValues.cropProduction || 1));
+        let normArea = Math.min(1, area / (globalMaxValues.agriculturalLandArea || 1));
+        let normYield = Math.min(1, yieldV / (globalMaxValues.cerealYield || 1));
+        let normSupply = Math.min(1, supply / (globalMaxValues.supply || 1));
+        
+        let malMax = globalMaxValues.undernourishment || 1;
+        let normMal = malMax > 0 ? 1 - Math.min(1, mal / malMax) : 0;
+        
+        let exportMax = globalMaxValues.foodExport || 1;
+        let normExport = Math.min(1, exp / exportMax);
+        
+        let importMax = globalMaxValues.foodImport || 1;
+        let normImport = Math.min(1, imp / importMax);
+        
+        let popMax = globalMaxValues.population || 1;
+        let normPop = Math.min(1, pop / popMax);
+        
+        const dimensions = [
+            { name: "耕地产量", actual: prodActual, value: normProd },
+            { name: "耕地面积", actual: areaActual, value: normArea },
+            { name: "谷物单产", actual: yieldActual, value: normYield },
+            { name: "供给力度", actual: supplyActual, value: normSupply },
+            { name: "粮食安全", actual: malActual, value: normMal, note: "(值越小越安全)" },
+            { name: "出口占比", actual: exportActual, value: normExport },
+            { name: "进口占比", actual: importActual, value: normImport },
+            { name: "总人口", actual: popActual, value: normPop }
+        ];
+        
+        const values = dimensions.map(d => d.value);
+        const angles = [];
+        for (let i = 0; i < dimensions.length; i++) {
+            angles.push((i * 2 * Math.PI / dimensions.length) - Math.PI / 2);
         }
         
-        document.getElementById("infoPanel").innerHTML = `
-            <h3>📌 ${countryData.country} (${countryData.year})</h3>
-            <div class="selected-info">
-                <p>🌾 <strong>耕地面积</strong><br>
-                <span class="highlight">${areaDisplay}</span><br>
-                <small>(占总面积 ${countryData.agriculturalLand.toFixed(1)}%)</small></p>
-                
-                <p>👥 <strong>总人口</strong><br>
-                <span class="highlight">${(countryData.population/1e6).toFixed(2)} 百万</span></p>
-                
-                ${yMetricHtml}
-                
-                <p>🌍 <strong>地理区域</strong><br>
-                <span class="highlight">${countryData.region}</span></p>
-                
-                <p>💰 <strong>收入组别</strong><br>
-                <span class="highlight">${countryData.incomeGroup}</span></p>
-            </div>
-            <hr>
-            <p style="font-size:12px; margin-top:12px;">
-                💡 点击其他圆圈可切换查看不同国家<br>
-                ⚫ 黑色边框表示当前选中国家
-            </p>
+        [0.2, 0.4, 0.6, 0.8, 1.0].forEach(level => {
+            const points = [];
+            for (let i = 0; i < dimensions.length; i++) {
+                const r = radius * level;
+                points.push([cx + r * Math.cos(angles[i]), cy + r * Math.sin(angles[i])]);
+            }
+            radarSvg.append("polygon")
+                .attr("points", points.map(p => p.join(",")).join(" "))
+                .attr("fill", "none")
+                .attr("stroke", "#ddd")
+                .attr("stroke-width", 0.5);
+        });
+        
+        for (let i = 0; i < dimensions.length; i++) {
+            radarSvg.append("line")
+                .attr("x1", cx).attr("y1", cy)
+                .attr("x2", cx + radius * Math.cos(angles[i]))
+                .attr("y2", cy + radius * Math.sin(angles[i]))
+                .attr("stroke", "#ccc").attr("stroke-width", 0.6);
+        }
+        
+        const dataPoints = [];
+        for (let i = 0; i < dimensions.length; i++) {
+            const r = radius * values[i];
+            dataPoints.push([cx + r * Math.cos(angles[i]), cy + r * Math.sin(angles[i])]);
+        }
+        radarSvg.append("polygon")
+            .attr("points", dataPoints.map(p => p.join(",")).join(" "))
+            .attr("fill", "#e67e22")
+            .attr("fill-opacity", 0.4)
+            .attr("stroke", "#e67e22")
+            .attr("stroke-width", 1.5);
+        
+        dataPoints.forEach(p => {
+            radarSvg.append("circle").attr("cx", p[0]).attr("cy", p[1]).attr("r", 3).attr("fill", "#e67e22");
+        });
+        
+        for (let i = 0; i < dimensions.length; i++) {
+            const r = radius + 20;
+            let x = cx + r * Math.cos(angles[i]);
+            let y = cy + r * Math.sin(angles[i]);
+            let dx = 0, dy = 0;
+            
+            if (angles[i] > -Math.PI/2 && angles[i] < -Math.PI/4) { dx = -12; dy = -5; }
+            else if (angles[i] >= -Math.PI/4 && angles[i] < 0) { dx = -5; dy = -10; }
+            else if (angles[i] >= 0 && angles[i] < Math.PI/4) { dx = 5; dy = -10; }
+            else if (angles[i] >= Math.PI/4 && angles[i] < Math.PI/2) { dx = 12; dy = -5; }
+            else if (angles[i] >= Math.PI/2 && angles[i] < 3*Math.PI/4) { dx = 12; dy = 5; }
+            else if (angles[i] >= 3*Math.PI/4 && angles[i] < Math.PI) { dx = 5; dy = 10; }
+            else if (angles[i] >= -Math.PI && angles[i] < -3*Math.PI/4) { dx = -5; dy = 10; }
+            else if (angles[i] >= -3*Math.PI/4 && angles[i] < -Math.PI/2) { dx = -12; dy = 5; }
+            
+            radarSvg.append("text")
+                .attr("x", x + dx)
+                .attr("y", y + dy - 4)
+                .attr("text-anchor", "middle")
+                .style("font-size", "8px")
+                .style("fill", "#2c3e50")
+                .style("font-weight", "bold")
+                .text(dimensions[i].name);
+            
+            radarSvg.append("text")
+                .attr("x", x + dx)
+                .attr("y", y + dy + 8)
+                .attr("text-anchor", "middle")
+                .style("font-size", "7px")
+                .style("fill", "#e67e22")
+                .text(dimensions[i].actual);
+            
+            if (dimensions[i].note) {
+                radarSvg.append("text")
+                    .attr("x", x + dx)
+                    .attr("y", y + dy + 16)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "5px")
+                    .style("fill", "#999")
+                    .text(dimensions[i].note);
+            }
+        }
+    }
+
+    function updateInfoPanel(d) {
+        let yValue = currentYAxis === "production" 
+            ? (d.foodProductionPerCapita ? d.foodProductionPerCapita * 10 : 0)
+            : (d.undernourishment || 0);
+        let assessment = getAssessmentLevel(yValue, currentYAxis);
+        let tradeBadge = getTradeBadge(d.tradeRole);
+        
+        document.getElementById("panelTitle").innerHTML = `📌 ${d.country} (${d.year})`;
+        document.getElementById("badgeRow").innerHTML = `
+            <span class="trade-badge" style="background:${tradeBadge.bg}; color:${tradeBadge.color}; border:1px solid ${tradeBadge.color}40;">${tradeBadge.text}</span>
+            <span class="assessment-badge" style="background:${assessment.color}20; color:${assessment.color}; border:1px solid ${assessment.color}40;">${assessment.emoji} ${assessment.level}</span>
         `;
+        
+        document.getElementById("panelContent").innerHTML = `
+            <div class="radar-container" id="radarContainer"></div>
+            <div class="detail-list">
+                <div class="detail-item">
+                    <span class="detail-label">🌍 地理区域</span>
+                    <span class="detail-value">${d.region || "N/A"}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">💰 收入组别</span>
+                    <span class="detail-value">${d.incomeGroup || "N/A"}</span>
+                </div>
+            </div>
+        `;
+        
+        const mapDiv = document.getElementById("worldmapMini");
+        mapDiv.style.display = "block";
+        
+        if (worldMapData) {
+            setTimeout(() => drawRealWorldMap(d.country), 10);
+        } else {
+            const checkMapData = setInterval(() => {
+                if (worldMapData) {
+                    clearInterval(checkMapData);
+                    drawRealWorldMap(d.country);
+                }
+            }, 100);
+            setTimeout(() => clearInterval(checkMapData), 5000);
+        }
+        
+        setTimeout(() => drawRadarChart(d), 50);
+    }
+
+    function updateLegend() {
+        const legendDiv = document.getElementById("legend");
+        if (currentColorMode === "region") {
+            legendDiv.innerHTML = `
+                <span><span class="legend-color" style="background:#1f77b4;"></span> 非洲</span>
+                <span><span class="legend-color" style="background:#ff7f0e;"></span> 亚洲</span>
+                <span><span class="legend-color" style="background:#2ca02c;"></span> 欧洲</span>
+                <span><span class="legend-color" style="background:#d62728;"></span> 北美洲</span>
+                <span><span class="legend-color" style="background:#9467bd;"></span> 南美洲</span>
+                <span><span class="legend-color" style="background:#8c564b;"></span> 大洋洲</span>
+                <span><span class="legend-color" style="background:#e377c2;"></span> 加勒比</span>
+                <span>⚪ 大小=耕地产量 | ⚫ 边框=选中</span>
+            `;
+        } else {
+            legendDiv.innerHTML = `
+                <span><span class="legend-color" style="background:#27ae60;"></span> 强劲出口国</span>
+                <span><span class="legend-color" style="background:#2ecc71;"></span> 净出口国</span>
+                <span><span class="legend-color" style="background:#e67e22;"></span> 净进口国</span>
+                <span><span class="legend-color" style="background:#e74c3c;"></span> 严重进口依赖</span>
+                <span><span class="legend-color" style="background:#95a5a6;"></span> 基本平衡</span>
+                <span><span class="legend-color" style="background:#7f8c8d;"></span> 数据缺失</span>
+                <span>⚪ 大小=耕地产量 | ⚫ 边框=选中</span>
+            `;
+        }
+    }
+
+    function getColorByRegion(region) {
+        const map = { "Africa": "#1f77b4", "Asia": "#ff7f0e", "Europe": "#2ca02c", "North America": "#d62728", "South America": "#9467bd", "Oceania": "#8c564b", "Caribbean": "#e377c2" };
+        return map[region] || "#aaa";
+    }
+
+    function getColorByTradeRole(role) {
+        const map = { "Net Exporter (Strong)": "#27ae60", "Net Exporter": "#2ecc71", "Net Importer (Heavy)": "#e74c3c", "Net Importer": "#e67e22", "Balanced": "#95a5a6", "No data": "#7f8c8d" };
+        return map[role] || "#aaa";
     }
 
     function drawVisualization() {
-        console.log("开始绘制图表，当前年份:", currentYear, "指标:", currentYAxis);
-        
         let filtered = fullData.filter(d => d.year === currentYear);
-        
-        if (regionFilter !== "all") {
-            filtered = filtered.filter(d => d.region === regionFilter);
-        }
-        if (incomeFilter !== "all") {
-            filtered = filtered.filter(d => d.incomeGroup === incomeFilter);
-        }
-        
+        if (regionFilter !== "all") filtered = filtered.filter(d => d.region === regionFilter);
+        if (incomeFilter !== "all") filtered = filtered.filter(d => d.incomeGroup === incomeFilter);
         filtered = filtered.filter(d => d.population > 0 && d.foodProduction > 0);
         
-        console.log("筛选后共", filtered.length, "个国家");
+        if (filtered.length === 0) { svg.selectAll("*").remove(); return; }
         
-        if (filtered.length === 0) {
-            svg.selectAll("*").remove();
-            return;
-        }
+        if (selectedCountry && !filtered.some(d => d.country === selectedCountry)) selectedCountry = null;
         
-        if (selectedCountry) {
-            const stillInFilter = filtered.some(d => d.country === selectedCountry);
-            if (!stillInFilter) {
-                selectedCountry = null;
-                d3.select("#countrySelect").property("value", "");
-            }
-        }
-        
-        // 计算X轴和Y轴值
         filtered.forEach(d => {
             d.logPopulation = Math.log10(d.population);
-            if (currentYAxis === "production") {
-                d.yValue = d.foodProductionPerCapita * 10;
-                d.yLabel = "农业生产供给力度 (×10)";
-            } else {
-                d.yValue = d.undernourishment;
-                d.yLabel = "营养不良率 (%)";
-            }
+            d.yValue = getYValue(d);
         });
-        
-        // 过滤掉Y轴无效值
         filtered = filtered.filter(d => d.yValue != null && !isNaN(d.yValue));
         
-        if (filtered.length === 0) {
-            svg.selectAll("*").remove();
-            return;
-        }
+        if (filtered.length === 0) { svg.selectAll("*").remove(); return; }
         
-        // 定义比例尺
-        const xExtent = d3.extent(filtered, d => d.logPopulation);
-        const yExtent = d3.extent(filtered, d => d.yValue);
+        const xExt = d3.extent(filtered, d => d.logPopulation);
+        const yExt = d3.extent(filtered, d => d.yValue);
+        const xDom = [Math.max(5.0, xExt[0] - 0.2), xExt[1] + 0.2];
+        let yMax = yExt[1] * 1.05;
+        if (yMax === 0) yMax = 10;
         
-        const xDomain = xExtent[0] === xExtent[1] 
-            ? [xExtent[0] - 0.5, xExtent[0] + 0.5]
-            : [xExtent[0] - 0.2, xExtent[1] + 0.2];
+        const xScale = d3.scaleLinear().domain(xDom).range([0, width - margin.left - margin.right]);
+        const yScale = d3.scaleLinear().domain([0, yMax]).range([height - margin.top - margin.bottom, 0]);
         
-        let yDomain;
-        if (currentYAxis === "production") {
-            yDomain = [0, yExtent[1] * 1.05];
-        } else {
-            yDomain = [0, yExtent[1] * 1.05];
-        }
+        let maxProd = Math.max(...filtered.filter(d => d.cropProduction).map(d => d.cropProduction), 100000);
+        const sizeScale = d3.scaleSqrt().domain([0, maxProd]).range([4, 35]);
         
-        const xScale = d3.scaleLinear()
-            .domain(xDomain)
-            .range([0, width - margin.left - margin.right]);
-        
-        const yScale = d3.scaleLinear()
-            .domain(yDomain)
-            .range([height - margin.top - margin.bottom, 0]);
-        
-        // 圆圈大小比例尺
-        const validLandAreas = filtered
-            .filter(d => d.agriculturalLandArea != null && d.agriculturalLandArea > 0)
-            .map(d => d.agriculturalLandArea);
-        
-        let maxLandArea = validLandAreas.length > 0 ? Math.max(...validLandAreas) : 500;
-        const sizeScale = d3.scaleSqrt()
-            .domain([0, maxLandArea])
-            .range([4, 35]);
-        
-        const colorMap = {
-            "Africa": "#1f77b4", "Asia": "#ff7f0e", "Europe": "#2ca02c",
-            "North America": "#d62728", "South America": "#9467bd",
-            "Oceania": "#8c564b", "Caribbean": "#e377c2"
-        };
-        
-        // 更新坐标轴
+        updateLegend();
         svg.selectAll("*").remove();
         
         const xTicks = [];
-        const xStep = (xDomain[1] - xDomain[0]) / 10;
-        for (let i = 0; i <= 10; i++) { xTicks.push(xDomain[0] + xStep * i); }
-        
-        const xAxis = d3.axisBottom(xScale)
-            .tickValues(xTicks)
-            .tickFormat(d => `10^${d.toFixed(1)}`);
-        svg.append("g")
-            .attr("class", "axis")
+        for (let i = 0; i <= 10; i++) xTicks.push(xDom[0] + (xDom[1] - xDom[0]) / 10 * i);
+        svg.append("g").attr("class", "axis")
             .attr("transform", `translate(0, ${height - margin.top - margin.bottom})`)
-            .call(xAxis);
+            .call(d3.axisBottom(xScale).tickValues(xTicks).tickFormat(d => `10^${d.toFixed(1)}`));
         
         const yTicks = [];
-        const yStep = yDomain[1] / 10;
-        for (let i = 0; i <= 10; i++) { yTicks.push(yStep * i); }
+        for (let i = 0; i <= 10; i++) yTicks.push(yMax / 10 * i);
+        svg.append("g").attr("class", "axis")
+            .call(d3.axisLeft(yScale).tickValues(yTicks).tickFormat(d => currentYAxis === "production" ? d.toFixed(2) : d.toFixed(1) + "%"));
         
-        const yAxis = d3.axisLeft(yScale)
-            .tickValues(yTicks)
-            .tickFormat(d => currentYAxis === "production" ? d.toFixed(2) : d.toFixed(1));
-        svg.append("g").attr("class", "axis").call(yAxis);
+        svg.append("text").attr("x", (width - margin.left - margin.right)/2).attr("y", height - margin.top - margin.bottom + 35)
+            .attr("text-anchor", "middle").style("fill", "#2c3e50").style("font-size", "11px").text("👥 人口 (对数尺度)");
+        svg.append("text").attr("x", -30).attr("y", -15).attr("text-anchor", "middle")
+            .style("fill", "#2c3e50").style("font-size", "11px").style("font-weight", "bold").text(getYAxisLabel());
+        svg.append("text").attr("x", (width - margin.left - margin.right)/2).attr("y", -10)
+            .attr("text-anchor", "middle").style("font-size", "12px").style("font-weight", "bold")
+            .text(`${currentYear}年 | 颜色:${currentColorMode === "region" ? "大洲" : "贸易角色"}`);
         
-        svg.append("text")
-            .attr("class", "axis-label")
-            .attr("x", (width - margin.left - margin.right)/2)
-            .attr("y", height - margin.top - margin.bottom + 40)
-            .attr("text-anchor", "middle")
-            .style("fill", "#2c3e50").style("font-size", "12px")
-            .text("👥 人口 (对数尺度)");
-        
-        svg.append("text")
-            .attr("class", "axis-label")
-            .attr("x", -15).attr("y", -20)
-            .attr("text-anchor", "middle")
-            .style("fill", "#2c3e50").style("font-size", "12px").style("font-weight", "bold")
-            .text(currentYAxis === "production" ? "📊 农业生产供给力度 (×10)" : "⚠️ 营养不良率 (%)");
-        
-        svg.append("text")
-            .attr("class", "chart-title")
-            .attr("x", (width - margin.left - margin.right)/2).attr("y", -15)
-            .attr("text-anchor", "middle")
-            .style("font-size", "14px").style("font-weight", "bold").style("fill", "#2c3e50")
-            .text(`${currentYear}年 全球农业格局 (${currentYAxis === "production" ? "生产指数" : "营养不良率"})`);
-        
-        // 绘制圆圈
         const circles = svg.selectAll(".country-circle").data(filtered, d => d.country);
         circles.exit().remove();
         
-        const circlesEnter = circles.enter()
-            .append("circle")
+        const enter = circles.enter().append("circle")
             .attr("class", "country-circle")
             .attr("cx", d => xScale(d.logPopulation))
             .attr("cy", d => yScale(d.yValue))
-            .attr("r", d => sizeScale(d.agriculturalLandArea || 0))
-            .attr("fill", d => colorMap[d.region] || "#aaa")
-            .attr("stroke", d => (selectedCountry === d.country) ? "#000000" : "#333")
-            .attr("stroke-width", d => (selectedCountry === d.country) ? 3 : 0.8)
-            .attr("opacity", 0.7)
-            .style("cursor", "pointer");
+            .attr("r", d => sizeScale(d.cropProduction || 0))
+            .attr("fill", d => currentColorMode === "region" ? getColorByRegion(d.region) : getColorByTradeRole(d.tradeRole))
+            .attr("stroke", d => (selectedCountry === d.country) ? "#000" : "#333")
+            .attr("stroke-width", d => (selectedCountry === d.country) ? 2.5 : 0.6)
+            .attr("opacity", 0.7).style("cursor", "pointer");
         
-        circlesEnter
-            .on("click", function(event, d) {
-                console.log("点击国家:", d.country);
-                event.stopPropagation();
-                selectedCountry = d.country;
-                d3.select("#countrySelect").property("value", d.country);
-                svg.selectAll(".country-circle")
-                    .attr("stroke", c => (c.country === selectedCountry) ? "#000000" : "#333")
-                    .attr("stroke-width", c => (c.country === selectedCountry) ? 3 : 0.8);
-                updateInfoPanel(d);
-            })
-            .on("mouseenter", function(event, d) {
-                d3.select(this).attr("stroke-width", 2.5).attr("opacity", 0.95);
-                var areaDisplay = (d.agriculturalLandArea && d.agriculturalLandArea > 0) 
-                    ? d.agriculturalLandArea.toFixed(5) + " 万km²" : "数据缺失";
-                var yDisplay = currentYAxis === "production" 
-                    ? "供给力度: " + (d.foodProductionPerCapita * 10).toFixed(2)
-                    : (d.undernourishment ? "营养不良率: " + d.undernourishment.toFixed(1) + "%" : "数据缺失");
-                tooltip.style("opacity", 1)
-                    .html(`<strong style="font-size:14px">${d.country}</strong><br>
-                        🌾 耕地面积: ${areaDisplay}<br>
-                        🌾 耕地占比: ${d.agriculturalLand.toFixed(1)}%<br>
-                        👥 人口: ${(d.population/1e6).toFixed(1)}M<br>
-                        📊 ${yDisplay}<br>
-                        💡 <em>点击查看详情</em>`)
-                    .style("left", (event.pageX + 15) + "px")
-                    .style("top", (event.pageY - 35) + "px");
-            })
-            .on("mouseleave", function(event, d) {
-                d3.select(this)
-                    .attr("stroke-width", d => (selectedCountry === d.country) ? 3 : 0.8)
-                    .attr("opacity", 0.7);
-                tooltip.style("opacity", 0);
-            });
+        enter.on("click", function(e, d) {
+            selectedCountry = d.country;
+            d3.select("#countrySelect").property("value", d.country);
+            svg.selectAll(".country-circle")
+                .attr("stroke", c => (c.country === selectedCountry) ? "#000" : "#333")
+                .attr("stroke-width", c => (c.country === selectedCountry) ? 2.5 : 0.6);
+            updateInfoPanel(d);
+        }).on("mouseenter", function(e, d) {
+            d3.select(this).attr("stroke-width", 2).attr("opacity", 0.9);
+            let prod = d.cropProduction ? (d.cropProduction / 10000).toFixed(2) + "亿吨" : "N/A";
+            tooltip.style("opacity", 1).html(`<strong>${d.country}</strong><br>🏭 产量: ${prod}<br>💡 点击查看详情`)
+                .style("left", (e.pageX + 12) + "px").style("top", (e.pageY - 25) + "px");
+        }).on("mouseleave", function() {
+            d3.select(this).attr("stroke-width", d => (selectedCountry === d.country) ? 2.5 : 0.6).attr("opacity", 0.7);
+            tooltip.style("opacity", 0);
+        });
         
-        circles.merge(circlesEnter)
-            .transition()
-            .duration(300)
+        circles.merge(enter).transition().duration(300)
             .attr("cx", d => xScale(d.logPopulation))
             .attr("cy", d => yScale(d.yValue))
-            .attr("r", d => sizeScale(d.agriculturalLandArea || 0));
-        
-        console.log("图表绘制完成，共绘制", filtered.length, "个圆圈");
+            .attr("r", d => sizeScale(d.cropProduction || 0));
         
         if (selectedCountry) {
-            const selectedData = filtered.find(d => d.country === selectedCountry);
-            if (selectedData) updateInfoPanel(selectedData);
+            let sel = filtered.find(d => d.country === selectedCountry);
+            if (sel) updateInfoPanel(sel);
+            else document.getElementById("worldmapMini").style.display = "none";
+        } else {
+            document.getElementById("worldmapMini").style.display = "none";
         }
     }
 </script>
