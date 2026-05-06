@@ -298,7 +298,11 @@
 <body>
 <div class="container">
     <h1>🌾 耕地 · 人口 · 粮食安全：探究世界农业格局</h1>
-    <div class="sub">点击任意国家圆圈查看详情 | 圆圈大小 = 耕地产量（耕地面积 × 谷物单产）</div>
+    <div class="sub" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <span>点击任意国家圆圈查看详情 | 圆圈大小 = 耕地产量（耕地面积 × 谷物单产）</span>
+        <a href="documentation.html" target="_blank" style="background: #e67e22; color: white; padding: 6px 16px; border-radius: 30px; text-decoration: none; font-size: 12px; font-weight: 500; transition: background 0.2s;" 
+           onmouseover="this.style.background='#d35400'" onmouseout="this.style.background='#e67e22'">📖 项目说明</a>
+    </div>
 
     <div class="controls">
         <div class="control-group">
@@ -359,7 +363,7 @@
                     <p style="font-size:11px; color:#888; margin-top:8px; text-align:center;">✨ 点击圆圈查看详情</p>
                 </div>
                 <div class="worldmap-mini" id="worldmapMini" style="display: none;">
-                    <p>🗺️ 国家地理位置 (真实世界地图)</p>
+                    <p>🗺️ 国家地理位置</p>
                     <div id="miniMap"></div>
                 </div>
             </div>
