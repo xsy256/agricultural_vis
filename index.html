@@ -1187,7 +1187,6 @@
         let areaActual = countryData.agriculturalLandArea ? countryData.agriculturalLandArea.toFixed(0) + "万km²" : "N/A";
         let yieldActual = countryData.cerealYield ? countryData.cerealYield.toFixed(0) + "kg/ha" : "N/A";
         let supplyActual = countryData.foodProductionPerCapita ? (countryData.foodProductionPerCapita * 10).toFixed(1) : "N/A";
-        let malActual = countryData.undernourishment ? countryData.undernourishment.toFixed(1) + "%" : "N/A";
         let exportActual = countryData.foodExport ? countryData.foodExport.toFixed(1) + "%" : "N/A";
         let importActual = countryData.foodImport ? countryData.foodImport.toFixed(1) + "%" : "N/A";
         let popActual = countryData.population ? (countryData.population / 1e8).toFixed(2) + "亿人" : "N/A";
@@ -1208,6 +1207,7 @@
         
         let malMax = globalMaxValues.undernourishment || 1;
         let normMal = malMax > 0 ? 1 - Math.min(1, mal / malMax) : 0;
+        let malActual = normMal.toFixed(2);
         
         let exportMax = globalMaxValues.foodExport || 1;
         let normExport = Math.min(1, exp / exportMax);
@@ -1223,7 +1223,7 @@
             { name: "耕地面积", actual: areaActual, value: normArea },
             { name: "谷物单产", actual: yieldActual, value: normYield },
             { name: "供给力度", actual: supplyActual, value: normSupply },
-            { name: "粮食安全", actual: malActual, value: normMal, note: "(值越小越安全)" },
+            { name: "粮食安全", actual: malActual, value: normMal },
             { name: "出口占比", actual: exportActual, value: normExport },
             { name: "进口占比", actual: importActual, value: normImport },
             { name: "总人口", actual: popActual, value: normPop }
