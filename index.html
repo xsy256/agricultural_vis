@@ -1167,7 +1167,7 @@
             if (value >= 5) return { level: "供给基本满足", color: "#f39c12", emoji: "🟠" };
             return { level: "供给压力较大", color: "#e74c3c", emoji: "🔴" };
         } else {
-            if (value < 2.5) return { level: "粮食安全状况良好", color: "#27ae60", emoji: "🟢" };
+            if (value < 5) return { level: "粮食安全状况良好", color: "#27ae60", emoji: "🟢" };
             if (value < 10) return { level: "粮食安全面临压力", color: "#f39c12", emoji: "🟠" };
             if (value < 20) return { level: "粮食不安全情况严重", color: "#e67e22", emoji: "🟠" };
             return { level: "粮食危机", color: "#e74c3c", emoji: "🔴" };
